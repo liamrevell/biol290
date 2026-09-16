@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Allele Fate under Natural Selection</title>
+<style>
+  :root{
+    --bg:#f7f7f8;
+    --panel:#ffffff;
+    --card:#ffffff;
+    --text:#1f2937;
+    --muted:#6b7280;
+    --border:#d1d5db;
+    --accent:#2563eb;
+    --accent-bg:#dbeafe;
+    --s2:#2563eb;
+    --s3:#16a34a;
+    --s4:#d97706;
+    --s5:#7c3aed;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    background:var(--bg);
+    color:var(--text);
+  }
+  main{
+    max-width:1100px;
+    margin:0 auto;
+    padding:24px 16px 40px;
+  }
+  h1{margin:0 0 6px;font-size:1.8rem}
+  .subtitle{margin:0 0 20px;color:var(--muted)}
+  .panel,.card{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:14px;
+  }
+  .grid2{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1.55fr);
+    gap:14px;
+    align-items:start;
+  }
+  .fitnessGrid,.statGrid{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:8px;
+  }
+  .stat{border-top:3px solid var(--border);padding-top:7px}
+  .big{font-size:1.3rem;font-weight:700;line-height:1.15}
+  .muted{color:var(--muted)}
+  label{display:block;font-size:.95rem}
+  input,select{
+    width:100%;
+    min-height:44px;
+    padding:8px;
+    font-size:16px;
+    background:var(--card);
+    color:var(--text);
+    border:1px solid var(--border);
+    border-radius:8px;
+  }
+  button{
+    min-height:44px;
+    border-radius:9px;
+    padding:8px 13px;
+    border:1px solid var(--border);
+    font-weight:600;
+    cursor:pointer;
+  }
+  button.primary{background:var(--accent-bg);color:var(--text);border-color:var(--accent)}
+  button.secondary{background:var(--card);color:var(--text)}
+  button:focus-visible,input:focus-visible,select:focus-visible{
+    outline:2px solid var(--accent);
+    outline-offset:2px;
+  }
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  .mt{margin-top:14px}
+  .mb{margin-bottom:10px}
+  .chartWrap{width:100%;overflow-x:auto}
+  svg{display:block;width:100%;min-width:420px;height:auto}
+  .axis{stroke:var(--border);stroke-width:1}
+  .gridline{stroke:var(--border);stroke-width:1;opacity:.7}
+  .traj{fill:none;stroke:var(--s2);stroke-width:3;stroke-linejoin:round;stroke-linecap:round}
+  .future{fill:none;stroke:var(--s2);stroke-width:2;opacity:.18;stroke-linejoin:round}
+  .marker{fill:var(--s3);stroke:var(--card);stroke-width:2}
+  .eqLine{stroke:var(--s5);stroke-width:2;stroke-dasharray:6 5;opacity:.8}
+  .barBg{fill:#f3f4f6;stroke:var(--border)}
+  .barAA{fill:var(--s2)}
+  .barAa{fill:var(--s3)}
+  .baraa{fill:var(--s4)}
+  .notice{
+    border-left:4px solid var(--s5);
+    padding:10px 12px;
+    background:#fafafa;
+    border-radius:8px;
+  }
+  .hidden{display:none}
+  details summary{cursor:pointer;font-weight:600}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  @media(max-width:700px){
+    .grid2{grid-template-columns:1fr}
+    .fitnessGrid,.statGrid{grid-template-columns:1fr}
+    svg{min-width:360px}
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Allele Fate under Natural Selection</h1>
+  <p class="subtitle">Deterministic diploid viability selection with user-defined genotype fitnesses.</p>
+
+  <div id="alleleSelApp">
+    <div class="grid2">
+      <section class="panel" aria-label="Model controls">
+        <div class="mb"><strong>Starting population</strong></div>
+        <label for="p0">Initial frequency of allele A, p₀</label>
+        <input id="p0" type="number" min="0" max="1" step="0.01" value="0.10">
+
+        <div class="mt mb"><strong>Relative genotype fitness</strong></div>
+        <div class="fitnessGrid">
+          <label>AA
+            <input id="wAA" type="number" min="0" step="0.01" value="1.10" aria-label="Fitness of genotype AA">
+          </label>
+          <label>Aa
+            <input id="wAa" type="number" min="0" step="0.01" value="1.05" aria-label="Fitness of genotype Aa">
+          </label>
+          <label>aa
+            <input id="waa" type="number" min="0" step="0.01" value="1.00" aria-label="Fitness of genotype aa">
+          </label>
+        </div>
+
+        <label class="mt" for="preset">Example selection regime</label>
+        <select id="preset">
+          <option value="custom">Custom</option>
+          <option value="additive">A advantageous: additive</option>
+          <option value="dominant">A advantageous: dominant</option>
+          <option value="recessive">A advantageous: recessive</option>
+          <option value="overdominance">Heterozygote advantage</option>
+          <option value="underdominance">Heterozygote disadvantage</option>
+          <option value="neutral">Neutral</option>
+        </select>
+
+        <div class="fitnessGrid mt">
+          <label>Generations
+            <input id="gens" type="number" min="1" max="1000" step="1" value="100">
+          </label>
+          <label>Animation speed
+            <select id="speed">
+              <option value="500">Slow</option>
+              <option value="160" selected>Normal</option>
+              <option value="55">Fast</option>
+              <option value="15">Very fast</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="row mt">
+          <button id="play" type="button" class="primary">▶ Play</button>
+          <button id="pause" type="button" class="secondary">Pause</button>
+          <button id="reset" type="button" class="secondary">Reset</button>
+        </div>
+        <div id="validation" class="muted mt" aria-live="polite"></div>
+      </section>
+
+      <section>
+        <div class="card mb">
+          <div class="row" style="justify-content:space-between;align-items:flex-start">
+            <div>
+              <div class="muted">Generation</div>
+              <div id="genNow" class="big">0</div>
+            </div>
+            <div>
+              <div class="muted">Allele A frequency</div>
+              <div id="pNow" class="big">0.1000</div>
+            </div>
+            <div>
+              <div class="muted">Mean fitness</div>
+              <div id="meanW" class="big">1.010</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row" style="justify-content:space-between">
+            <div><strong>Allele-frequency trajectory</strong></div>
+            <div class="muted">p(A)</div>
+          </div>
+          <div class="chartWrap">
+            <svg id="chart" viewBox="0 0 700 320" role="img" aria-label="Allele A frequency through generations">
+              <g id="grid"></g>
+              <path id="futurePath" class="future"></path>
+              <line id="eqLine" class="eqLine" x1="55" x2="680" y1="0" y2="0" visibility="hidden"></line>
+              <path id="trajPath" class="traj"></path>
+              <circle id="marker" class="marker" r="6" cx="55" cy="25"></circle>
+              <text x="17" y="29" font-size="12" fill="#6b7280">1.0</text>
+              <text x="20" y="166" font-size="12" fill="#6b7280">0.5</text>
+              <text x="26" y="298" font-size="12" fill="#6b7280">0</text>
+              <text x="55" y="316" font-size="12" fill="#6b7280">0</text>
+              <text id="xMid" x="365" y="316" text-anchor="middle" font-size="12" fill="#6b7280">50</text>
+              <text id="xEnd" x="680" y="316" text-anchor="end" font-size="12" fill="#6b7280">100 generations</text>
+            </svg>
+          </div>
+          <div id="eqLabel" class="muted hidden">Dashed line = equilibrium frequency.</div>
+        </div>
+      </section>
+    </div>
+
+    <div class="grid2 mt">
+      <section class="card">
+        <div class="mb"><strong>Genotypes before selection</strong></div>
+        <div id="genoBars" aria-label="Hardy-Weinberg genotype frequencies"></div>
+        <div class="muted mt">Assuming random mating, frequencies are p², 2pq, and q² at the start of each generation.</div>
+      </section>
+
+      <section class="card">
+        <div class="mb"><strong>Predicted fate</strong></div>
+        <div id="fate" class="notice" aria-live="polite"></div>
+        <div class="statGrid mt">
+          <div class="stat"><div class="muted">Δp this generation</div><div id="deltaP"><strong>—</strong></div></div>
+          <div class="stat"><div class="muted">Expected p after run</div><div id="pEnd"><strong>—</strong></div></div>
+          <div class="stat"><div class="muted">Internal equilibrium</div><div id="pEq"><strong>None</strong></div></div>
+        </div>
+      </section>
+    </div>
+
+    <details class="card mt">
+      <summary>Model used</summary>
+      <div class="mt" style="line-height:1.6">
+        Before selection: AA = p², Aa = 2pq, aa = q². After viability selection,
+        <div class="mt"><code>p′ = [p²wAA + pqwAa] / w̄</code></div>
+        <div class="mt"><code>w̄ = p²wAA + 2pqwAa + q²waa</code></div>
+        <p>The new allele frequency becomes the starting frequency of the next generation. The model assumes an infinite population and is deterministic: no genetic drift, mutation, migration, assortative mating, or frequency-dependent fitness.</p>
+      </div>
+    </details>
+  </div>
+</main>
+
+<script>
+(() => {
+  const root = document.getElementById('alleleSelApp');
+  const $ = id => root.querySelector('#' + id);
+  const p0=$('p0'), wAA=$('wAA'), wAa=$('wAa'), waa=$('waa'), gens=$('gens'), speed=$('speed');
+  const play=$('play'), pause=$('pause'), reset=$('reset'), preset=$('preset');
+  const path=$('trajPath'), futurePath=$('futurePath'), marker=$('marker'), grid=$('grid'), eqLine=$('eqLine'), eqLabel=$('eqLabel');
+  const genNow=$('genNow'), pNow=$('pNow'), meanW=$('meanW'), validation=$('validation'), fate=$('fate');
+  const deltaP=$('deltaP'), pEnd=$('pEnd'), pEq=$('pEq'), genoBars=$('genoBars'), xMid=$('xMid'), xEnd=$('xEnd');
+
+  let traj=[], current=0, timer=null, invalidAt=null;
+  const x0=55, x1=680, y0=25, y1=295;
+
+  const clamp = (v,a,b) => Math.min(b, Math.max(a,v));
+  const fmt = v => Number.isFinite(v) ? v.toFixed(v < 0.001 && v > 0 ? 6 : 4) : '—';
+
+  function values(){
+    return {
+      p: clamp(Number(p0.value),0,1),
+      A: Math.max(0,Number(wAA.value)),
+      H: Math.max(0,Number(wAa.value)),
+      a: Math.max(0,Number(waa.value)),
+      n: clamp(Math.round(Number(gens.value)||100),1,1000)
+    };
+  }
+
+  function oneStep(p,A,H,a){
+    const q=1-p;
+    const mw=p*p*A + 2*p*q*H + q*q*a;
+    if(!(mw>0) || !Number.isFinite(mw)) return {p:null,mw};
+    return {p:(p*p*A+p*q*H)/mw,mw};
+  }
+
+  function build(){
+    stop();
+    invalidAt=null;
+    const v=values();
+    p0.value=v.p; wAA.value=v.A; wAa.value=v.H; waa.value=v.a; gens.value=v.n;
+
+    if(!Number.isFinite(v.A+v.H+v.a)){
+      validation.textContent='Enter finite, non-negative fitness values.';
+      return false;
+    }
+
+    traj=[v.p];
+    let p=v.p;
+    for(let i=0;i<v.n;i++){
+      const s=oneStep(p,v.A,v.H,v.a);
+      if(s.p===null){ invalidAt=i; break; }
+      p=clamp(s.p,0,1);
+      traj.push(p);
+    }
+
+    validation.textContent = invalidAt===null
+      ? ''
+      : 'Mean fitness reaches zero, so no surviving parents remain and the recurrence stops.';
+
+    current=0;
+    drawGrid(v.n);
+    drawFuture();
+    describeFate(v);
+    update(0);
+    return true;
+  }
+
+  function drawGrid(n){
+    let s='';
+    [0,.25,.5,.75,1].forEach(yv=>{
+      const y=y1-yv*(y1-y0);
+      s += `<line class="gridline" x1="${x0}" x2="${x1}" y1="${y}" y2="${y}"></line>`;
+    });
+    s += `<line class="axis" x1="${x0}" x2="${x0}" y1="${y0}" y2="${y1}"></line>`;
+    s += `<line class="axis" x1="${x0}" x2="${x1}" y1="${y1}" y2="${y1}"></line>`;
+    grid.innerHTML=s;
+    xMid.textContent=Math.round(n/2);
+    xEnd.textContent=n+' generations';
+  }
+
+  function point(i,p,n){
+    return [x0+(i/n)*(x1-x0), y1-p*(y1-y0)];
+  }
+
+  function makePath(arr,end){
+    const n=Math.max(1,values().n);
+    let d='';
+    for(let i=0;i<=end && i<arr.length;i++){
+      const [x,y]=point(i,arr[i],n);
+      d += (i ? ' L ' : 'M ') + x.toFixed(2) + ' ' + y.toFixed(2);
+    }
+    return d;
+  }
+
+  function drawFuture(){
+    futurePath.setAttribute('d',makePath(traj,traj.length-1));
+  }
+
+  function update(i){
+    if(!traj.length) return;
+    current=clamp(i,0,traj.length-1);
+
+    const v=values();
+    const p=traj[current];
+    path.setAttribute('d',makePath(traj,current));
+
+    const [x,y]=point(current,p,v.n);
+    marker.setAttribute('cx',x);
+    marker.setAttribute('cy',y);
+
+    const st=oneStep(p,v.A,v.H,v.a);
+    genNow.textContent=current;
+    pNow.textContent=fmt(p);
+    meanW.textContent=st.mw>0 ? st.mw.toFixed(4) : '0';
+    deltaP.textContent=st.p===null ? 'undefined' : ((st.p-p)>=0?'+':'') + (st.p-p).toFixed(6);
+
+    renderBars(p);
+    pEnd.textContent=fmt(traj[traj.length-1]);
+  }
+
+  function renderBars(p){
+    const q=1-p;
+    const vals=[['AA',p*p,'barAA'],['Aa',2*p*q,'barAa'],['aa',q*q,'baraa']];
+    genoBars.innerHTML = vals.map(([lab,v,cls]) =>
+      `<div style="display:grid;grid-template-columns:34px 1fr 58px;gap:8px;align-items:center;margin:8px 0">
+        <span>${lab}</span>
+        <svg viewBox="0 0 200 20" style="min-width:0">
+          <rect class="barBg" x="0" y="2" width="200" height="16" rx="4"></rect>
+          <rect class="${cls}" x="0" y="2" width="${(200*v).toFixed(2)}" height="16" rx="4"></rect>
+        </svg>
+        <span style="text-align:right">${v.toFixed(3)}</span>
+      </div>`
+    ).join('');
+  }
+
+  function internalEq(A,H,a){
+    const den=A-2*H+a;
+    if(Math.abs(den)<1e-12) return null;
+    const e=(a-H)/den;
+    return e>0 && e<1 ? e : null;
+  }
+
+  function describeFate(v){
+    const {p,A,H,a}=v;
+    const eps=1e-10;
+    const eq=internalEq(A,H,a);
+    let text='';
+
+    if(eq!==null){
+      const yy=y1-eq*(y1-y0);
+      eqLine.setAttribute('y1',yy);
+      eqLine.setAttribute('y2',yy);
+      eqLine.setAttribute('visibility','visible');
+      eqLabel.classList.remove('hidden');
+      pEq.textContent=eq.toFixed(4);
+    }else{
+      eqLine.setAttribute('visibility','hidden');
+      eqLabel.classList.add('hidden');
+      pEq.textContent='None';
+    }
+
+    if(p<=eps){
+      text='<strong>A is absent.</strong> In this deterministic model it cannot reappear without mutation or migration.';
+    }else if(p>=1-eps){
+      text='<strong>A is already fixed.</strong> Allele a cannot reappear without mutation or migration.';
+    }else if(Math.abs(A-H)<eps && Math.abs(H-a)<eps){
+      text='<strong>Neutral.</strong> All three genotypes have equal fitness, so allele frequency remains at its starting value.';
+    }else if(H>Math.max(A,a)){
+      text=`<strong>Stable polymorphism.</strong> Heterozygote advantage maintains both alleles. The stable equilibrium is p* ≈ ${eq===null?'—':eq.toFixed(4)}.`;
+    }else if(H<Math.min(A,a)){
+      if(eq!==null && Math.abs(p-eq)<1e-8){
+        text=`<strong>Unstable equilibrium.</strong> p begins exactly at the threshold p* ≈ ${eq.toFixed(4)}; any perturbation would send the population toward fixation or loss.`;
+      }else if(eq!==null && p>eq){
+        text=`<strong>A tends toward fixation.</strong> There is heterozygote disadvantage and p₀ is above the unstable threshold p* ≈ ${eq.toFixed(4)}.`;
+      }else{
+        text=`<strong>A tends toward loss.</strong> There is heterozygote disadvantage and p₀ is below the unstable threshold p* ≈ ${eq===null?'—':eq.toFixed(4)}.`;
+      }
+    }else if(A>a){
+      text='<strong>A tends toward fixation.</strong> Selection is directionally favorable to A for this fitness ordering.';
+    }else if(A<a){
+      text='<strong>A tends toward loss.</strong> Selection is directionally unfavorable to A for this fitness ordering.';
+    }else{
+      text='<strong>Frequency-dependent outcome from genotype fitnesses.</strong> The trajectory above shows the deterministic direction from the chosen starting frequency.';
+    }
+
+    fate.innerHTML=text;
+  }
+
+  function stepAnimation(){
+    if(current>=traj.length-1){
+      stop();
+      return;
+    }
+    update(current+1);
+    timer=setTimeout(stepAnimation,Math.max(10,Number(speed.value)||160));
+  }
+
+  function start(){
+    if(!traj.length && !build()) return;
+    if(current>=traj.length-1) update(0);
+    stop();
+    timer=setTimeout(stepAnimation,40);
+  }
+
+  function stop(){
+    if(timer!==null){
+      clearTimeout(timer);
+      timer=null;
+    }
+  }
+
+  function applyPreset(){
+    const v=preset.value;
+    const m={
+      additive:[1.10,1.05,1],
+      dominant:[1.10,1.10,1],
+      recessive:[1.10,1,1],
+      overdominance:[0.90,1,0.80],
+      underdominance:[1,0.80,1],
+      neutral:[1,1,1]
+    };
+    if(m[v]){
+      [wAA.value,wAa.value,waa.value]=m[v];
+      build();
+    }
+  }
+
+  [p0,wAA,wAa,waa,gens].forEach(el =>
+    el.addEventListener('change',()=>{
+      preset.value='custom';
+      build();
+    })
+  );
+
+  preset.addEventListener('change',applyPreset);
+  play.addEventListener('click',start);
+  pause.addEventListener('click',stop);
+  reset.addEventListener('click',()=>{
+    stop();
+    update(0);
+  });
+
+  build();
+})();
+</script>
+</body>
+</html>
