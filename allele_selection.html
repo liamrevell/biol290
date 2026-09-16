@@ -119,7 +119,7 @@
       <section class="panel" aria-label="Model controls">
         <div class="mb"><strong>Starting population</strong></div>
         <label for="p0">Initial frequency of allele A, p₀</label>
-        <input id="p0" type="number" min="0" max="1" step="0.01" value="0.10">
+        <input id="p0" type="number" min="0" max="1" step="0.01" value="0.01">
 
         <div class="mt mb"><strong>Relative genotype fitness</strong></div>
         <div class="fitnessGrid">
@@ -147,13 +147,13 @@
 
         <div class="fitnessGrid mt">
           <label>Generations
-            <input id="gens" type="number" min="1" max="1000" step="1" value="100">
+            <input id="gens" type="number" min="1" max="2000" step="1" value="200">
           </label>
           <label>Animation speed
             <select id="speed">
               <option value="500">Slow</option>
-              <option value="160" selected>Normal</option>
-              <option value="55">Fast</option>
+              <option value="160">Normal</option>
+              <option value="55" selected>Fast</option>
               <option value="15">Very fast</option>
             </select>
           </label>
