@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Breeder's Equation Interactive</title>
+<style>
+:root{--bg:#f7f7f8;--panel:#fff;--text:#1f2937;--muted:#6b7280;--border:#d1d5db;--blue:#2563eb;--green:#16a34a;--orange:#d97706;--purple:#7c3aed;--red:#dc2626}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}main{max-width:1150px;margin:auto;padding:24px 16px 40px}
+h1{margin:0 0 6px}.sub{color:var(--muted);margin:0 0 18px}.layout{display:grid;grid-template-columns:minmax(0,.82fr) minmax(0,1.68fr);gap:14px;align-items:start}
+.panel,.card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px}.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.stat,.mini{border-top:3px solid var(--border);padding-top:7px}.big{font-size:1.18rem;font-weight:750}.muted{color:var(--muted)}label{font-size:.9rem;display:block}
+input,select{width:100%;min-height:44px;padding:8px;font-size:16px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text)}
+button{min-height:44px;border:1px solid var(--border);border-radius:9px;padding:8px 13px;font-weight:650;cursor:pointer;background:#fff}button.primary{background:#dbeafe;border-color:var(--blue)}
+.row{display:flex;gap:8px;flex-wrap:wrap}.mt{margin-top:14px}.mb{margin-bottom:10px}.small{font-size:.8rem}.stages{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}.stage{font-size:.82rem;padding:5px 9px;border:1px solid var(--border);border-radius:999px;color:var(--muted)}.stage.active{border-color:var(--blue);background:#dbeafe;color:var(--text);font-weight:700}
+.chartwrap{overflow-x:auto}svg{display:block;width:100%;min-width:520px;height:auto}.axis,.tick{stroke:var(--border);stroke-width:1}.initial{fill:var(--blue)}.survivor{fill:var(--green)}.dead{fill:var(--muted);opacity:.55}.offspring{fill:var(--orange)}.deadx{stroke:var(--red);stroke-width:2.2;stroke-linecap:round}
+.mean0{stroke:var(--blue);stroke-width:2;stroke-dasharray:5 4}.meanSel{stroke:var(--green);stroke-width:2;stroke-dasharray:5 4}.meanOff{stroke:var(--orange);stroke-width:2;stroke-dasharray:5 4}.pred{stroke:var(--purple);stroke-width:2;stroke-dasharray:2 5}.target{stroke:var(--red);stroke-width:2;stroke-dasharray:7 4}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:.78rem;color:var(--muted)}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px}.survbox{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}.callout{border-left:4px solid var(--purple);padding:10px 12px;background:#fafafa;border-radius:8px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.formula{font-family:ui-monospace,Consolas,monospace}
+@media(max-width:760px){.layout,.grid2{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}svg{min-width:460px}}@media(max-width:430px){.two,.survbox,.stats,.grid3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+<h1>Breeder's Equation: Selection and Response</h1>
+<p class="sub">A finite-population simulation of selection, inheritance, and the prediction R = h²S.</p>
+
+<div class="layout">
+<section class="panel">
+<b>Organism & trait</b>
+<label class="mt">Organism
+<select id="organism">
+<option value="lizard">Lizard — body size</option>
+<option value="sparrow">Sparrow — wingspan</option>
+<option value="arabidopsis">Arabidopsis — plant height</option>
+</select></label>
+
+<div class="two mt">
+<label><span id="initialLabel"></span><input id="mu0" type="number"></label>
+<label><span id="sdLabel"></span><input id="sd0" type="number" min=".1" step=".5"></label>
+</div>
+
+<label class="mt">Population size<input id="N" type="number" min="40" max="5000" step="10"></label>
+<div class="small muted">Simulates up to 5,000 individuals. For large populations, only a subset is drawn.</div>
+
+<b style="display:block;margin-top:18px">Selection & inheritance</b>
+<label class="mt"><span id="selectedLabel"></span><input id="selMean" type="number" step=".5"></label>
+<label class="mt">Heritability, h²<input id="h2" type="number" min="0" max="1" step=".05"></label>
+
+<div class="row mt">
+<button id="run" class="primary">▶ Run generation</button>
+<button id="rerun">Run again</button>
+<button id="newpop">New population</button>
+</div>
+<div id="validation" class="small muted mt"></div>
+
+<div class="survbox">
+<div class="mini"><div class="small muted">Expected survival</div><div id="expectedSurv" class="big">—</div></div>
+<div class="mini"><div class="small muted">Survivors</div><div id="realizedSurv" class="big">—</div></div>
+<div class="mini"><div class="small muted">Died</div><div id="realizedDeaths" class="big">—</div></div>
+</div>
+
+<div class="card mt">
+<b>How survival is assigned</b>
+<div class="small muted mt">Survival probability follows a logistic function of the trait. The curve is shifted so that its probability-weighted survivor mean approaches the requested selected mean. Individuals that die remain visible in gray and are crossed out.</div>
+</div>
+</section>
+
+<section>
+<div class="stages">
+<span class="stage active">1 · Population</span><span class="stage">2 · Selection</span><span class="stage">3 · Reproduction</span><span class="stage">4 · Offspring</span>
+</div>
+
+<div class="card">
+<div class="row" style="justify-content:space-between;align-items:flex-start">
+<div><b id="chartTitle"></b><div id="stageText" class="small muted">Initial population before selection.</div></div>
+<div><div id="displayNote" class="small muted"></div><div class="legend"><span><span class="dot" style="background:var(--green)"></span>survived</span><span><b style="color:var(--red)">×</b> died</span><span><span class="dot" style="background:var(--orange)"></span>offspring</span></div></div>
+</div>
+<div class="chartwrap">
+<svg viewBox="0 0 760 390">
+<g id="axisLayer"></g><g id="guideLayer"></g><g id="parentLayer"></g><g id="offspringLayer"></g><g id="labelLayer"></g>
+</svg>
+</div>
+</div>
+
+<div class="stats mt">
+<div class="stat"><div class="small muted">Initial mean</div><div id="initialMean" class="big">—</div></div>
+<div class="stat"><div class="small muted">Target selected</div><div id="targetMeanOut" class="big">—</div></div>
+<div class="stat"><div class="small muted">Realized selected</div><div id="selectedMeanOut" class="big">—</div></div>
+<div class="stat"><div class="small muted">Predicted offspring</div><div id="predMean" class="big">—</div></div>
+<div class="stat"><div class="small muted">Realized offspring</div><div id="offspringMean" class="big">—</div></div>
+</div>
+</section>
+</div>
+
+<div class="grid2 mt">
+<section class="card">
+<b>Breeder's-equation prediction</b>
+<div class="formula mt">S = z̄selected − z̄before</div>
+<div class="formula">R = h²S</div>
+<div class="grid3 mt">
+<div><div class="small muted">Realized S</div><div id="Sout" class="big">—</div></div>
+<div><div class="small muted">Predicted R</div><div id="Rpred" class="big">—</div></div>
+<div><div class="small muted">Realized R</div><div id="Rreal" class="big">—</div></div>
+</div>
+</section>
+<section class="card">
+<b>Prediction vs. realization</b>
+<div id="comparison" class="callout mt">Run a generation to compare the expected response with the simulation.</div>
+<div id="selectionNote" class="small muted mt"></div>
+</section>
+</div>
+</main>
+
+<script>
+(()=>{
+const $=id=>document.getElementById(id),organism=$('organism'),mu0=$('mu0'),sd0=$('sd0'),Nin=$('N'),selMean=$('selMean'),h2in=$('h2');
+const stages=[...document.querySelectorAll('.stage')],svgNS='http://www.w3.org/2000/svg',MAXDRAW=400;
+const cfgs={
+ lizard:{name:'Lizard',trait:'body size',axis:'Body size',unit:'mm',mu:70,sd:8,target:76,N:500,h2:.5},
+ sparrow:{name:'Sparrow',trait:'wingspan',axis:'Wingspan',unit:'mm',mu:225,sd:18,target:240,N:500,h2:.5},
+ arabidopsis:{name:'Arabidopsis',trait:'plant height',axis:'Plant height',unit:'cm',mu:24,sd:5,target:29,N:1000,h2:.5}
+};
+let seed=42317,runIndex=0,parents=[],survivors=[],offspring=[],probs=[],stats=null,xmin=0,xmax=1,drawP=[],drawO=[],timers=[];
+const cfg=()=>cfgs[organism.value],clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),fmt=x=>Number.isFinite(x)?x.toFixed(2):'—';
+function mean(a,k){return a.reduce((s,x)=>s+(k?x[k]:x),0)/a.length}
+function sd(a,k){if(a.length<2)return 0;let m=mean(a,k);return Math.sqrt(a.reduce((s,x)=>{let d=(k?x[k]:x)-m;return s+d*d},0)/(a.length-1))}
+function rng(a){return function(){let t=a+=0x6D2B79F5;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296}}
+function norm(r){let u=0,v=0;while(!u)u=r();while(!v)v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+function logistic(x){return x>35?1:x<-35?0:1/(1+Math.exp(-x))}
+function vals(){let c=cfg();return{mu:+mu0.value||c.mu,sd:clamp(+sd0.value||c.sd,.1,500),N:clamp(Math.round(+Nin.value||c.N),40,5000),target:+selMean.value||c.target,h2:clamp(+h2in.value||0,0,1)}}
+function setStage(n,t){stages.forEach((x,i)=>x.classList.toggle('active',i===n));$('stageText').textContent=t}
+function stop(){timers.forEach(clearTimeout);timers=[]}
+function later(f,t){timers.push(setTimeout(f,t))}
+function sample(n,m,r){let a=Array.from({length:n},(_,i)=>i),k=Math.min(n,m);for(let i=0;i<k;i++){let j=i+Math.floor(r()*(n-i));[a[i],a[j]]=[a[j],a[i]]}return a.slice(0,k)}
+function unit(x){return fmt(x)+' '+cfg().unit}
+function defaults(){let c=cfg();mu0.value=c.mu;sd0.value=c.sd;Nin.value=c.N;selMean.value=c.target;h2in.value=c.h2;$('initialLabel').textContent=`Initial mean ${c.trait} (${c.unit})`;$('sdLabel').textContent=`Phenotypic SD (${c.unit})`;$('selectedLabel').textContent=`Target mean among survivors (${c.unit})`;$('chartTitle').textContent=`${c.name} ${c.trait} across one generation`;makePop()}
+function makePop(){stop();runIndex=0;let v=vals(),r=rng(seed),sg=v.sd*Math.sqrt(v.h2),se=v.sd*Math.sqrt(1-v.h2);parents=[];for(let i=0;i<v.N;i++){let gd=sg*norm(r),e=se*norm(r);parents.push({id:i,g:v.mu+gd,p:v.mu+gd+e,survive:false})}drawP=sample(v.N,MAXDRAW,rng(seed+888));drawO=[];survivors=[];offspring=[];stats=null;scale();renderParents(false);$('offspringLayer').innerHTML='';$('guideLayer').innerHTML='';$('displayNote').textContent=v.N>MAXDRAW?`Showing ${MAXDRAW} of ${v.N.toLocaleString()} simulated individuals`:'Each symbol = one individual';setStage(0,'Initial population before selection.');$('initialMean').textContent=unit(mean(parents,'p'));$('targetMeanOut').textContent=unit(v.target);['selectedMeanOut','predMean','offspringMean','expectedSurv','realizedSurv','realizedDeaths','Sout','Rpred','Rreal'].forEach(id=>$(id).textContent='—');$('selectionNote').textContent='';$('comparison').textContent='Run a generation to compare the expected response with the simulation.'}
+function calibrate(){let v=vals(),pm=mean(parents,'p'),ps=Math.max(sd(parents,'p'),1e-9),z=parents.map(x=>(x.p-pm)/ps),dir=Math.sign(v.target-pm);if(!dir){probs=parents.map(()=>1);return{expectedFrac:1,adjusted:pm}}let beta=dir*2.5;function calc(a){let sw=0,sm=0;for(let i=0;i<parents.length;i++){let p=logistic(a+beta*z[i]);sw+=p;sm+=p*parents[i].p}return{m:sm/sw,f:sw/parents.length}}let lo=calc(-30),hi=calc(30),target=clamp(v.target,Math.min(lo.m,hi.m),Math.max(lo.m,hi.m)),a=-30,b=30,inc=lo.m<hi.m;for(let k=0;k<80;k++){let mid=(a+b)/2,m=calc(mid).m;if(inc?(m<target):(m>target))a=mid;else b=mid}let alpha=(a+b)/2,out=calc(alpha);probs=z.map(x=>logistic(alpha+beta*x));return{expectedFrac:out.f,adjusted:target}}
+function select(){let v=vals(),cal=calibrate(),r=rng(seed+70001+runIndex*104729);survivors=[];parents.forEach((x,i)=>{x.survive=r()<probs[i];if(x.survive)survivors.push(x)});let initial=mean(parents,'p');if(survivors.length<2){stats={initial,cal,failed:true};return}let selected=mean(survivors,'p'),S=selected-initial,R=v.h2*S;stats={initial,selected,S,R,pred:initial+R,cal,failed:false}}
+function reproduce(){if(stats.failed)return;let v=vals(),r=rng(seed+170003+runIndex*130363),VA=v.h2*v.sd*v.sd,VE=(1-v.h2)*v.sd*v.sd,seg=Math.sqrt(VA/2),env=Math.sqrt(VE);offspring=[];for(let i=0;i<v.N;i++){let a=survivors[Math.floor(r()*survivors.length)],b=survivors[Math.floor(r()*survivors.length)],g=(a.g+b.g)/2+seg*norm(r);offspring.push({id:i,g,p:g+env*norm(r)})}drawO=sample(v.N,MAXDRAW,rng(seed+runIndex*8191+444));stats.off=mean(offspring,'p');stats.Rreal=stats.off-stats.initial;stats.err=stats.Rreal-stats.R}
+function scale(){let v=vals(),a=parents.map(x=>x.p).concat(offspring.map(x=>x.p),[v.target]);if(stats&&!stats.failed)a.push(stats.pred,stats.selected);let lo=Math.min(...a),hi=Math.max(...a),pad=Math.max(v.sd*.55,.1),step=cfg().unit==='cm'?5:10;xmin=Math.floor((lo-pad)/step)*step;xmax=Math.ceil((hi+pad)/step)*step;if(xmax<=xmin)xmax=xmin+step;let h='<line class="axis" x1="58" x2="735" y1="338" y2="338"/>';let span=xmax-xmin;if(span<30)step=5;if(span<15)step=2;for(let t=Math.ceil(xmin/step)*step;t<=xmax;t+=step){let x=xs(t);h+=`<line class="tick" x1="${x}" x2="${x}" y1="338" y2="345"/><text x="${x}" y="362" text-anchor="middle" font-size="12" fill="#6b7280">${t}</text>`}h+=`<text x="396" y="383" text-anchor="middle" font-size="13" fill="#6b7280">${cfg().axis} (${cfg().unit})</text>`;$('axisLayer').innerHTML=h;$('labelLayer').innerHTML='<text x="12" y="72" font-size="13" fill="#6b7280">Parents</text><text x="12" y="248" font-size="13" fill="#6b7280">Offspring</text>'}
+function xs(z){return 58+(z-xmin)/(xmax-xmin)*677}
+function yy(i,t){return t+(i%5)*17+(Math.floor(i/5)%2)*4}
+function glyph(ind,y,cls,dead=false){let g=document.createElementNS(svgNS,'g'),x=xs(ind.p),k=organism.value;g.setAttribute('transform',`translate(${x} ${y})`);g.style.color=cls==='survivor'?'var(--green)':cls==='offspring'?'var(--orange)':cls==='dead'?'var(--muted)':'var(--blue)';if(k==='lizard')g.innerHTML=`<ellipse class="${cls}" rx="6.5" ry="3.3"/><circle class="${cls}" cx="7.3" cy="-.5" r="2.2"/><path d="M-6 0C-11 0-14 2-17 3" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M-2 2l-3 4M2 2l4 4M-2-2l-3-4M2-2l4-4" stroke="currentColor"/>`;else if(k==='sparrow')g.innerHTML=`<ellipse class="${cls}" rx="6.7" ry="4"/><circle class="${cls}" cx="6.1" cy="-2.1" r="2.7"/><path d="M8.5-2L12-1 8.6 0Z" class="${cls}"/><path d="M-1-1Q-8-8-12-5Q-7 0-1 2Z" class="${cls}"/>`;else g.innerHTML=`<path d="M0 7L0-7" stroke="currentColor" stroke-width="1.5"/><ellipse class="${cls}" cx="-4" cy="1" rx="4.8" ry="2.3" transform="rotate(-30 -4 1)"/><ellipse class="${cls}" cx="4" cy="-2" rx="4.8" ry="2.3" transform="rotate(30 4 -2)"/><ellipse class="${cls}" cx="-3" cy="-5" rx="3.6" ry="1.8" transform="rotate(-40 -3 -5)"/>`;if(dead)g.innerHTML+='<path class="deadx" d="M-8-8L8 8M8-8L-8 8"/>';return g}
+function renderParents(sel){let L=$('parentLayer');L.innerHTML='';drawP.forEach((idx,j)=>{let x=parents[idx],d=sel&&!x.survive;L.appendChild(glyph(x,yy(j,45),sel?(x.survive?'survivor':'dead'):'initial',d))})}
+function renderOff(){let L=$('offspringLayer');L.innerHTML='';drawO.forEach((idx,j)=>L.appendChild(glyph(offspring[idx],yy(j,218),'offspring')))}
+function guide(z,cls,label,y1,ty){let x=xs(z);return `<line class="${cls}" x1="${x}" x2="${x}" y1="${y1}" y2="330"/><text x="${clamp(x+5,70,640)}" y="${ty}" font-size="11" fill="#6b7280">${label}</text>`}
+function guides(stage){let h=guide(stats?stats.initial:mean(parents,'p'),'mean0','Initial mean',28,18);if(stage>=1&&stats&&!stats.failed)h+=guide(vals().target,'target','Target selected mean',28,35)+guide(stats.selected,'meanSel','Realized selected mean',28,52);if(stage>=3&&stats&&!stats.failed)h+=guide(stats.pred,'pred','Predicted offspring',205,194)+guide(stats.off,'meanOff','Realized offspring',205,211);$('guideLayer').innerHTML=h}
+function results(){let v=vals(),c=cfg(),deaths=parents.length-survivors.length,cal=stats.cal;$('expectedSurv').textContent=(100*cal.expectedFrac).toFixed(1)+'%';$('realizedSurv').textContent=survivors.length.toLocaleString();$('realizedDeaths').textContent=deaths.toLocaleString();$('initialMean').textContent=unit(stats.initial);$('targetMeanOut').textContent=unit(v.target);if(stats.failed){$('comparison').innerHTML='<b>Reproductive failure:</b> fewer than two individuals survived.';return}$('selectedMeanOut').textContent=unit(stats.selected);$('predMean').textContent=unit(stats.pred);$('offspringMean').textContent=unit(stats.off);$('Sout').textContent=(stats.S>=0?'+':'')+fmt(stats.S)+' '+c.unit;$('Rpred').textContent=(stats.R>=0?'+':'')+fmt(stats.R)+' '+c.unit;$('Rreal').textContent=(stats.Rreal>=0?'+':'')+fmt(stats.Rreal)+' '+c.unit;let e=Math.abs(stats.err),w=stats.err>0?'larger than':stats.err<0?'smaller than':'equal to';$('comparison').innerHTML=`The realized response was <b>${fmt(e)} ${c.unit} ${w}</b> the breeder's-equation prediction.`;$('selectionNote').textContent=`Expected survival: ${(100*cal.expectedFrac).toFixed(1)}%. Realized: ${survivors.length.toLocaleString()} survivors and ${deaths.toLocaleString()} deaths.`}
+function run(){stop();runIndex++;select();reproduce();scale();renderParents(false);$('offspringLayer').innerHTML='';guides(0);setStage(0,'Initial population before selection.');$('expectedSurv').textContent=(100*stats.cal.expectedFrac).toFixed(1)+'%';later(()=>{renderParents(true);guides(1);let d=parents.length-survivors.length;setStage(1,`${survivors.length.toLocaleString()} survived and ${d.toLocaleString()} died. Dead individuals are gray and crossed out; only survivors reproduce.`)},650);later(()=>{if(!stats.failed)setStage(2,'Only survivors contribute to reproduction.')},1400);later(()=>{if(!stats.failed)renderOff();guides(stats.failed?1:3);if(!stats.failed)setStage(3,'Offspring are shown below. Compare the realized mean with the breeder\'s-equation prediction.');results()},2200)}
+organism.addEventListener('change',defaults);$('run').addEventListener('click',run);$('rerun').addEventListener('click',run);$('newpop').addEventListener('click',()=>{seed=(seed+99991)>>>0;makePop()});[mu0,sd0,Nin,h2in].forEach(x=>x.addEventListener('change',makePop));defaults();
+})();
+</script>
+</body>
+</html>
