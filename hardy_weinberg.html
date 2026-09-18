@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hardy–Weinberg Challenge</title>
+<style>
+:root{
+  --bg:#f7f7f8;--panel:#fff;--text:#1f2937;--muted:#6b7280;--border:#d1d5db;
+  --blue:#2563eb;--green:#16a34a;--orange:#d97706;--purple:#7c3aed;--red:#dc2626;
+  --accent:#2563eb;--accentbg:#dbeafe;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+main{max-width:1220px;margin:auto;padding:24px 16px 42px}
+h1{margin:0 0 6px;font-size:1.85rem}
+.sub{margin:0 0 18px;color:var(--muted)}
+.panel,.card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px}
+.layout{display:grid;grid-template-columns:minmax(250px,.72fr) minmax(0,1.85fr);gap:14px;align-items:start}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+input[type=number]{width:100%;min-height:44px;padding:8px;font-size:16px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text)}
+button{min-height:44px;padding:8px 13px;border:1px solid var(--border);border-radius:9px;background:#fff;color:var(--text);font-weight:650;cursor:pointer}
+button.primary{background:var(--accentbg);border-color:var(--accent)}
+button:disabled{opacity:.4;cursor:not-allowed}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.feedback{padding:9px 11px;border:1px solid var(--border);border-radius:9px;font-size:.9rem}
+.correct{border-color:var(--green)}
+.incorrect{border-color:var(--red)}
+.hidden{display:none}
+.stagebar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.stage{font-size:.77rem;padding:5px 8px;border:1px solid var(--border);border-radius:999px;color:var(--muted)}
+.stage.active{background:var(--accentbg);border-color:var(--accent);color:var(--text);font-weight:700}
+.stage.done{border-color:var(--green);color:var(--text)}
+.genoColumns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:start}
+.genoCol{border:1px solid var(--border);border-radius:12px;padding:9px;background:#fff;min-width:0}
+.genoHead{text-align:center;font-weight:750;margin-bottom:7px}
+.tally{display:grid;grid-template-columns:repeat(5,24px);gap:4px;justify-content:center}
+.person{width:24px;height:30px;border:1px solid var(--border);border-radius:10px 10px 7px 7px;display:flex;align-items:center;justify-content:center;background:#fff}
+.pair{display:flex;gap:2px}
+.allele{width:9px;height:17px;border-radius:999px;display:block}
+.A{background:var(--blue)}
+.a{background:var(--orange)}
+.tenBreak{grid-column:1/-1;height:3px;border-top:2px solid var(--muted);opacity:.55;margin:1px 0 2px}
+.tenLabel{grid-column:1/-1;text-align:right;font-size:.65rem;color:var(--muted);margin-top:-5px}
+.gbar{height:42px;border:1px solid var(--border);border-radius:9px;overflow:hidden;display:flex}
+.gA,.ga{display:flex;align-items:center;justify-content:center;font-weight:750;transition:width .35s ease}
+.gA{background:var(--blue)}
+.ga{background:var(--orange)}
+.formula{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.fusion{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center}
+.gameteCard{text-align:center;border:1px solid var(--border);border-radius:12px;padding:10px}
+.bigAllele{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.15rem;font-weight:800;margin:0 auto 5px}
+.arrow{text-align:center;font-size:1.5rem;color:var(--muted);margin:4px 0}
+.callout{border-left:4px solid var(--purple);padding:10px 12px;background:#fff;border-radius:8px}
+.big{font-size:1.22rem;font-weight:750}
+.small{font-size:.82rem}.muted{color:var(--muted)}.mt{margin-top:14px}.mt2{margin-top:8px}.mb{margin-bottom:10px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th,td{padding:7px;border-bottom:1px solid var(--border);text-align:right}
+th:first-child,td:first-child{text-align:left}
+@media(max-width:850px){.layout{grid-template-columns:1fr}}
+@media(max-width:610px){.genoColumns{grid-template-columns:1fr}.fusion{grid-template-columns:1fr}.two,.three{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+<h1>Hardy–Weinberg Challenge</h1>
+<p class="sub">Infer allele frequencies, calculate Hardy–Weinberg expectations, test the starting population, and then follow a deterministic life cycle.</p>
+
+<div class="layout">
+<section class="panel">
+  <b>Hardy–Weinberg challenge</b>
+  <div class="small muted mt2">There are exactly <strong>100 diploid adults</strong>, so there are 200 allele copies.</div>
+
+  <div class="card mt">
+    <b>1. Determine p and q</b>
+    <div class="small muted mt2">The adults are sorted by genotype. Tally marks divide each column into groups of 10 individuals.</div>
+    <div class="two mt">
+      <label class="small">p = f(A)
+        <input id="pGuess" type="number" min="0" max="1" step="0.1" placeholder="0.0–1.0">
+      </label>
+      <label class="small">q = f(a)
+        <input id="qGuess" type="number" min="0" max="1" step="0.1" placeholder="0.0–1.0">
+      </label>
+    </div>
+    <button id="checkPQ" class="primary mt" type="button">Check p and q</button>
+    <div id="pqFeedback" class="feedback hidden mt2"></div>
+  </div>
+
+  <div id="calcBox" class="card mt hidden">
+    <b>2. Calculate expected HWE frequencies</b>
+    <div class="three mt">
+      <label class="small">p² = f(AA)
+        <input id="aaGuess1" type="number" min="0" max="1" step="0.01" placeholder="0.00">
+      </label>
+      <label class="small">2pq = f(Aa)
+        <input id="hetGuess" type="number" min="0" max="1" step="0.01" placeholder="0.00">
+      </label>
+      <label class="small">q² = f(aa)
+        <input id="aaGuess2" type="number" min="0" max="1" step="0.01" placeholder="0.00">
+      </label>
+    </div>
+    <button id="checkFreq" class="primary mt" type="button">Check HWE frequencies</button>
+    <div id="freqFeedback" class="feedback hidden mt2"></div>
+  </div>
+
+  <div id="eqBox" class="card mt hidden">
+    <b>3. Is the starting population at HWE?</b>
+    <div class="two mt">
+      <button id="yesBtn" type="button">Yes</button>
+      <button id="noBtn" type="button">No</button>
+    </div>
+    <div id="eqFeedback" class="feedback hidden mt2"></div>
+  </div>
+
+  <div id="lifeBox" class="card mt hidden">
+    <b>Now follow the life cycle</b>
+    <button id="gameteBtn" class="primary mt2" type="button">4. Produce gametes →</button>
+    <button id="fusionBtn" class="mt2" type="button" disabled>5. Fuse gametes →</button>
+    <button id="growBtn" class="mt2" type="button" disabled>6. Grow zygotes → adults</button>
+  </div>
+
+  <div class="row mt">
+    <button id="restartBtn" type="button">Restart challenge</button>
+    <button id="newBtn" type="button">New challenge</button>
+  </div>
+  <div class="small muted mt2"><strong>Restart challenge</strong> keeps the same starting population. <strong>New challenge</strong> generates a different one.</div>
+</section>
+
+<section>
+  <div class="stagebar">
+    <span class="stage active">Adults</span>
+    <span class="stage">Gametes</span>
+    <span class="stage">Zygotes</span>
+    <span class="stage">Next adults</span>
+  </div>
+
+  <div class="card">
+    <b>Starting adult population</b>
+    <div class="small muted mb">Sorted by genotype for counting. A tally line appears after every 10 individuals.</div>
+    <div id="adultColumns" class="genoColumns"></div>
+  </div>
+
+  <div id="gameteSection" class="hidden mt">
+    <div class="arrow">↓ meiosis ↓</div>
+    <div class="card">
+      <b>Exact gamete pool</b>
+      <div class="small muted mt2">No sampling is performed. The adults contribute an idealized pool of 200 gametes with exactly the same allele frequencies p and q.</div>
+      <div class="gbar mt"><div id="barA" class="gA"></div><div id="bara" class="ga"></div></div>
+      <div class="two mt2">
+        <div><div class="small muted">A gametes</div><div id="countA" class="big"></div></div>
+        <div><div class="small muted">a gametes</div><div id="counta" class="big"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="zygoteSection" class="hidden mt">
+    <div class="arrow">↓ idealized random union of gametes ↓</div>
+    <div class="card">
+      <b>100 zygotes at exact Hardy–Weinberg frequencies</b>
+      <div class="small muted mt2">“Random mating” determines the probabilities; the display uses the exact expected numbers rather than a stochastic sample.</div>
+
+      <div class="fusion mt">
+        <div class="gameteCard">
+          <div class="bigAllele A">A</div>
+          <div class="formula">frequency p</div>
+        </div>
+        <div style="text-align:center">
+          <div class="formula">A × A → p²</div>
+          <div class="formula">A × a or a × A → 2pq</div>
+          <div class="formula">a × a → q²</div>
+        </div>
+        <div class="gameteCard">
+          <div class="bigAllele a">a</div>
+          <div class="formula">frequency q</div>
+        </div>
+      </div>
+
+      <div id="zygoteColumns" class="genoColumns mt"></div>
+      <table class="mt">
+        <thead><tr><th>Genotype</th><th>Frequency</th><th>Exact count</th></tr></thead>
+        <tbody>
+          <tr><td>AA</td><td id="zygFA"></td><td id="zygNA"></td></tr>
+          <tr><td>Aa</td><td id="zygFH"></td><td id="zygNH"></td></tr>
+          <tr><td>aa</td><td id="zygFa"></td><td id="zygNa"></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="adult2Section" class="hidden mt">
+    <div class="arrow">↓ growth, no selection ↓</div>
+    <div class="card">
+      <b>Next-generation adults</b>
+      <div id="adult2Columns" class="genoColumns mt2"></div>
+      <div id="finalMessage" class="callout mt"></div>
+    </div>
+  </div>
+</section>
+</div>
+</main>
+
+<script>
+(()=>{
+const $=id=>document.getElementById(id),stages=[...document.querySelectorAll('.stage')];
+const pChoices=[.1,.2,.3,.4,.5,.6,.7,.8,.9];
+let truth=null,stage=0;
+
+function setStage(n){
+  stage=n;
+  stages.forEach((s,i)=>{
+    s.classList.toggle('active',i===n);
+    s.classList.toggle('done',i<n);
+  });
+}
+function person(g){
+  const a=g==='AA'?['A','A']:g==='Aa'?['A','a']:['a','a'];
+  return `<div class="person" aria-label="${g}"><div class="pair"><span class="allele ${a[0]}"></span><span class="allele ${a[1]}"></span></div></div>`;
+}
+function tally(count,g){
+  let h='',shown=0;
+  for(let i=0;i<count;i++){
+    h+=person(g); shown++;
+    if(shown%10===0&&shown<count){
+      h+=`<div class="tenBreak"></div><div class="tenLabel">${shown}</div>`;
+    }
+  }
+  return h;
+}
+function col(g,count){
+  return `<div class="genoCol"><div class="genoHead">${g}</div><div class="tally">${tally(count,g)}</div></div>`;
+}
+function renderCols(id,c){
+  $(id).innerHTML=col('AA',c.AA)+col('Aa',c.Aa)+col('aa',c.aa);
+}
+function makeTruth(){
+  const p=pChoices[Math.floor(Math.random()*pChoices.length)],q=1-p;
+  const h={AA:Math.round(100*p*p),Aa:Math.round(100*2*p*q),aa:Math.round(100*q*q)};
+  const isHW=Math.random()<.5;
+  let counts={...h};
+
+  if(!isHW){
+    const homoExcess=Math.random()<.5;
+    const maxK=homoExcess?Math.floor(h.Aa/2):Math.min(h.AA,h.aa);
+    const candidates=[2,3,4,5,6,8,10].filter(k=>k<=maxK);
+    const k=candidates.length?candidates[Math.floor(Math.random()*candidates.length)]:1;
+    if(homoExcess){
+      counts.AA+=k; counts.Aa-=2*k; counts.aa+=k;
+    } else {
+      counts.AA-=k; counts.Aa+=2*k; counts.aa-=k;
+    }
+  }
+
+  return{p,q,h,isHW,counts,fAA:p*p,fAa:2*p*q,faa:q*q};
+}
+function feedback(id,ok,msg){
+  const e=$(id);
+  e.className='feedback mt2 '+(ok?'correct':'incorrect');
+  e.innerHTML=(ok?'<strong>Correct.</strong> ':'<strong>Incorrect.</strong> ')+msg;
+}
+function clearProgress(){
+  ['pGuess','qGuess','aaGuess1','hetGuess','aaGuess2'].forEach(id=>$(id).value='');
+  ['pqFeedback','freqFeedback','eqFeedback'].forEach(id=>{
+    $(id).className='feedback hidden mt2';
+    $(id).textContent='';
+  });
+  ['calcBox','eqBox','lifeBox','gameteSection','zygoteSection','adult2Section'].forEach(id=>$(id).classList.add('hidden'));
+  $('gameteBtn').disabled=false;
+  $('fusionBtn').disabled=true;
+  $('growBtn').disabled=true;
+  $('barA').style.width='0%';
+  $('bara').style.width='0%';
+  $('barA').textContent='';
+  $('bara').textContent='';
+  $('countA').textContent='';
+  $('counta').textContent='';
+  setStage(0);
+}
+function newChallenge(){
+  truth=makeTruth();
+  clearProgress();
+  renderCols('adultColumns',truth.counts);
+}
+function restartChallenge(){
+  clearProgress();
+  renderCols('adultColumns',truth.counts);
+}
+
+$('checkPQ').addEventListener('click',()=>{
+  const p=Number($('pGuess').value),q=Number($('qGuess').value);
+  if(Math.abs(p-truth.p)<.001&&Math.abs(q-truth.q)<.001){
+    feedback('pqFeedback',true,`p = ${truth.p.toFixed(1)} and q = ${truth.q.toFixed(1)}.`);
+    $('calcBox').classList.remove('hidden');
+  }else{
+    feedback('pqFeedback',false,'Count allele copies from the genotype columns. There are 200 allele copies total, and p + q = 1.');
+  }
+});
+
+$('checkFreq').addEventListener('click',()=>{
+  const x=Number($('aaGuess1').value),y=Number($('hetGuess').value),z=Number($('aaGuess2').value),tol=.005;
+  if(Math.abs(x-truth.fAA)<tol&&Math.abs(y-truth.fAa)<tol&&Math.abs(z-truth.faa)<tol){
+    feedback('freqFeedback',true,`Expected frequencies are ${truth.fAA.toFixed(2)}, ${truth.fAa.toFixed(2)}, and ${truth.faa.toFixed(2)}.`);
+    $('eqBox').classList.remove('hidden');
+  }else{
+    feedback('freqFeedback',false,'Use p², 2pq, and q². The three frequencies must sum to 1.');
+  }
+});
+
+function answer(ans){
+  if(ans===truth.isHW){
+    feedback('eqFeedback',true,truth.isHW
+      ?'The observed genotype counts already equal the HWE expectation.'
+      :'The observed genotype counts differ from the HWE expectation.');
+    $('lifeBox').classList.remove('hidden');
+  }else{
+    feedback('eqFeedback',false,'Because N = 100, each expected frequency × 100 is the exact expected genotype count. Compare those counts with the three columns.');
+  }
+}
+$('yesBtn').addEventListener('click',()=>answer(true));
+$('noBtn').addEventListener('click',()=>answer(false));
+
+$('gameteBtn').addEventListener('click',()=>{
+  setStage(1);
+  $('gameteSection').classList.remove('hidden');
+  const nA=Math.round(200*truth.p),na=200-nA;
+  $('barA').style.width=(100*truth.p)+'%';
+  $('bara').style.width=(100*truth.q)+'%';
+  $('barA').textContent=`A ${nA}`;
+  $('bara').textContent=`a ${na}`;
+  $('countA').textContent=nA;
+  $('counta').textContent=na;
+  $('gameteBtn').disabled=true;
+  $('fusionBtn').disabled=false;
+});
+
+$('fusionBtn').addEventListener('click',()=>{
+  setStage(2);
+  $('zygoteSection').classList.remove('hidden');
+  renderCols('zygoteColumns',truth.h);
+  $('zygFA').textContent=truth.fAA.toFixed(2);
+  $('zygFH').textContent=truth.fAa.toFixed(2);
+  $('zygFa').textContent=truth.faa.toFixed(2);
+  $('zygNA').textContent=truth.h.AA;
+  $('zygNH').textContent=truth.h.Aa;
+  $('zygNa').textContent=truth.h.aa;
+  $('fusionBtn').disabled=true;
+  $('growBtn').disabled=false;
+});
+
+$('growBtn').addEventListener('click',()=>{
+  setStage(3);
+  $('adult2Section').classList.remove('hidden');
+  renderCols('adult2Columns',truth.h);
+  $('finalMessage').innerHTML=truth.isHW
+    ?`The starting population was already at Hardy–Weinberg equilibrium, so the next generation has the <strong>same genotype counts</strong>. The allele frequencies remain p = ${truth.p.toFixed(1)} and q = ${truth.q.toFixed(1)}.`
+    :`The starting population was not at Hardy–Weinberg equilibrium. After idealized random mating, the next generation has exactly <strong>${truth.h.AA} AA, ${truth.h.Aa} Aa, and ${truth.h.aa} aa</strong>. Allele frequencies did not change: p = ${truth.p.toFixed(1)}, q = ${truth.q.toFixed(1)}.`;
+  $('growBtn').disabled=true;
+});
+
+$('restartBtn').addEventListener('click',restartChallenge);
+$('newBtn').addEventListener('click',newChallenge);
+
+newChallenge();
+})();
+</script>
+</body>
+</html>
