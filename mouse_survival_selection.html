@@ -93,6 +93,9 @@ button:disabled{cursor:default}
 #mouse-selection-v4 .main-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:.75rem;align-items:stretch}
 #mouse-selection-v4 .geno-grid{display:grid;grid-template-columns:repeat(3,1fr)}
 #mouse-selection-v4 .status-grid{display:grid;grid-template-columns:1fr auto;gap:.5rem;align-items:center}
+#mouse-selection-v4 .calc-grid{display:grid;grid-template-columns:1fr 1.2fr;gap:.75rem;margin-top:.5rem;padding-top:.5rem;border-top:1px solid var(--viz-border)}
+#mouse-selection-v4 .equation{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;line-height:1.45;color:var(--viz-text)}
+#mouse-selection-v4 .calc-title{font-size:12px;font-weight:700;margin-bottom:.2rem}
 #mouse-selection-v4 .primary{
   border:0;
   background:var(--viz-accent-bg);
@@ -102,6 +105,11 @@ button:disabled{cursor:default}
   border:1px solid var(--viz-border);
   background:var(--viz-card);
   color:var(--viz-text);
+}
+#mouse-selection-v4 button.auto-active{
+  outline:3px solid color-mix(in srgb,var(--viz-accent) 38%,transparent);
+  background:var(--viz-accent-bg);
+  transform:translateY(1px);
 }
 #mouse-selection-v4 select{
   border:1px solid var(--viz-border);
@@ -114,6 +122,7 @@ button:disabled{cursor:default}
   #mouse-selection-v4 .controls-grid{grid-template-columns:1fr}
   #mouse-selection-v4 .status-grid{grid-template-columns:1fr}
   #mouse-selection-v4 .status-grid .text-right{text-align:left}
+  #mouse-selection-v4 .calc-grid{grid-template-columns:1fr}
 }
 </style>
 </head>
@@ -136,7 +145,7 @@ button:disabled{cursor:default}
         <input id="w-aa" type="range" min="0" max="100" step="5" value="50" aria-label="aa survival fitness">
       </div>
       <div class="fit-card settings-grid">
-        <label class="min-w-0"><span class="mini">Starting p</span><select id="p-start" class="w-full mt-1 rounded-md border bg-transparent px-2 py-1 text-base"><option value="0.2">0.20</option><option value="0.3">0.30</option><option value="0.4">0.40</option><option value="0.5">0.50</option><option value="0.6" selected>0.60</option><option value="0.7">0.70</option><option value="0.8">0.80</option></select></label>
+        <label class="min-w-0"><span class="mini">Starting p</span><select id="p-start" class="w-full mt-1 rounded-md border bg-transparent px-2 py-1 text-base"><option value="0.1">0.10</option><option value="0.2">0.20</option><option value="0.3">0.30</option><option value="0.4">0.40</option><option value="0.5">0.50</option><option value="0.6" selected>0.60</option><option value="0.7">0.70</option><option value="0.8">0.80</option><option value="0.9">0.90</option></select></label>
         <label class="min-w-0"><span class="mini">Mice shown</span><select id="n-icons" class="w-full mt-1 rounded-md border bg-transparent px-2 py-1 text-base"><option value="20">20</option><option value="30" selected>30</option><option value="40">40</option></select></label>
       </div>
     </div>
@@ -144,6 +153,7 @@ button:disabled{cursor:default}
     <div class="flex flex-wrap items-center gap-2 mt-3">
       <button id="select-btn" type="button" class="rounded-lg primary px-4 py-2 font-semibold">Apply survival selection</button>
       <button id="next-btn" type="button" disabled class="rounded-lg secondary px-4 py-2 font-semibold disabled:opacity-40">Reproduce → next generation</button>
+      <button id="plus5-btn" type="button" class="rounded-lg secondary px-4 py-2 font-semibold">+5 generations</button>
       <button id="restart-btn" type="button" class="rounded-lg secondary px-3 py-2">Restart</button>
       <div class="ml-auto text-sm font-semibold">Generation <span id="generation">0</span></div>
     </div>
@@ -186,6 +196,20 @@ button:disabled{cursor:default}
       <div id="status" class="text-sm" aria-live="polite">Adjust genotype fitnesses, then apply survival selection.</div>
       <div id="math" class="mini text-right">p = 0.600; q = 0.400; p² = 0.360; 2pq = 0.480; q² = 0.160</div>
     </div>
+    <div class="calc-grid">
+      <div>
+        <div class="calc-title">Selection equations</div>
+        <div class="equation">w̄ = p²w<sub>AA</sub> + 2pqw<sub>Aa</sub> + q²w<sub>aa</sub></div>
+        <div class="equation">p′ = (p²w<sub>AA</sub> + pqw<sub>Aa</sub>) / w̄</div>
+        <div class="equation">q′ = (q²w<sub>aa</sub> + pqw<sub>Aa</sub>) / w̄</div>
+      </div>
+      <div>
+        <div class="calc-title">Current calculation</div>
+        <div id="calc-wbar" class="equation">—</div>
+        <div id="calc-p" class="equation">—</div>
+        <div id="calc-q" class="equation">—</div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -195,7 +219,7 @@ button:disabled{cursor:default}
  if(!root||root.dataset.ready)return; root.dataset.ready='1';
  const $=id=>root.querySelector('#'+id);
  const mouseSVG='<svg aria-hidden="true" viewBox="0 0 80 50"><ellipse cx="38" cy="29" rx="24" ry="14" fill="currentColor"/><circle cx="60" cy="23" r="10" fill="currentColor"/><circle cx="65" cy="13" r="5" fill="currentColor"/><circle cx="55" cy="13" r="5" fill="currentColor"/><circle cx="64" cy="21" r="1.7" fill="#f4f4f4"/><path d="M14 30 C4 28,2 20,8 16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>';
- let state={p:.6,generation:0,selected:false,zygote:null,adult:null,wbar:null,pAdult:null,historyP:[.6],historyQ:[.4]};
+ let state={p:.6,generation:0,selected:false,zygote:null,adult:null,wbar:null,pAdult:null,historyP:[.6],historyQ:[.4],animating:false};
 
  function hwe(p){const q=1-p;return{AA:p*p,Aa:2*p*q,aa:q*q};}
  function fit(g){return Number($('w-'+g).value)/100;}
@@ -254,13 +278,14 @@ button:disabled{cursor:default}
    state.historyP.forEach((v,i)=>{s+='<circle cx="'+x(i)+'" cy="'+y(v)+'" r="4" fill="var(--viz-series-2)"/>';});
    state.historyQ.forEach((v,i)=>{s+='<circle cx="'+x(i)+'" cy="'+y(v)+'" r="4" fill="var(--viz-series-4)"/>';});
    const px=x(last),py=y(state.historyP[last]),qy=y(state.historyQ[last]);
-   s+='<text x="'+Math.min(W-R-5,px+8)+'" y="'+(py-7)+'" font-size="12" font-weight="700" fill="var(--viz-series-2)">p = '+state.historyP[last].toFixed(3)+'</text>';
-   s+='<text x="'+Math.min(W-R-5,px+8)+'" y="'+(qy+15)+'" font-size="12" font-weight="700" fill="var(--viz-series-4)">q = '+state.historyQ[last].toFixed(3)+'</text>';
+   s+='<text x="'+Math.min(W-R-5,px+8)+'" y="'+(py-7)+'" font-size="13" font-weight="700" fill="var(--viz-series-2)">A</text>';
+   s+='<text x="'+Math.min(W-R-5,px+8)+'" y="'+(qy+15)+'" font-size="13" font-weight="700" fill="var(--viz-series-4)">a</text>';
    s+='<text x="'+(W/2)+'" y="'+(H-2)+'" text-anchor="middle" font-size="11" fill="var(--viz-muted)">generation</text>';
    s+='<text x="12" y="'+(H/2)+'" text-anchor="middle" font-size="11" fill="var(--viz-muted)" transform="rotate(-90 12 '+(H/2)+')">allele frequency</text>';
    svg.innerHTML=s;
  }
  function reset(){
+   if(state.animating)return;
    state.p=Number($('p-start').value);state.generation=0;state.selected=false;state.zygote=hwe(state.p);state.adult=null;state.wbar=null;state.pAdult=null;state.historyP=[state.p];state.historyQ=[1-state.p];render();
  }
  function select(){
@@ -274,6 +299,55 @@ button:disabled{cursor:default}
    state.p=state.pAdult;state.generation++;state.zygote=hwe(state.p);state.adult=null;state.wbar=null;state.pAdult=null;state.selected=false;
    state.historyP.push(state.p);state.historyQ.push(1-state.p);render();
  }
+ function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
+ async function advanceFive(){
+   if(state.animating)return;
+   state.animating=true;
+   render();
+
+   for(let i=0;i<5;i++){
+     $('select-btn').classList.add('auto-active');
+     select();
+     await sleep(650);
+     $('select-btn').classList.remove('auto-active');
+
+     if(state.pAdult===null)break;
+
+     $('next-btn').classList.add('auto-active');
+     nextGeneration();
+     await sleep(500);
+     $('next-btn').classList.remove('auto-active');
+   }
+
+   state.animating=false;
+   render();
+ }
+ function renderCalculations(){
+   const p=state.p,q=1-p;
+   const wAA=fit('AA'),wAa=fit('Aa'),waa=fit('aa');
+   const termAA=p*p*wAA;
+   const termAa=2*p*q*wAa;
+   const termaa=q*q*waa;
+   const bar=termAA+termAa+termaa;
+
+   $('calc-wbar').innerHTML=
+     'w̄ = ('+p.toFixed(3)+'² × '+wAA.toFixed(2)+') + (2 × '+p.toFixed(3)+' × '+q.toFixed(3)+' × '+wAa.toFixed(2)+') + ('+q.toFixed(3)+'² × '+waa.toFixed(2)+') = <strong>'+bar.toFixed(4)+'</strong>';
+
+   if(bar<=0){
+     $('calc-p').innerHTML='p′ is undefined because w̄ = 0.';
+     $('calc-q').innerHTML='q′ is undefined because w̄ = 0.';
+     return;
+   }
+
+   const pNum=p*p*wAA+p*q*wAa;
+   const qNum=q*q*waa+p*q*wAa;
+   const pPrime=pNum/bar;
+   const qPrime=qNum/bar;
+   $('calc-p').innerHTML=
+     'p′ = [('+p.toFixed(3)+'² × '+wAA.toFixed(2)+') + ('+p.toFixed(3)+' × '+q.toFixed(3)+' × '+wAa.toFixed(2)+')] / '+bar.toFixed(4)+' = <strong>'+pPrime.toFixed(4)+'</strong>';
+   $('calc-q').innerHTML=
+     'q′ = [('+q.toFixed(3)+'² × '+waa.toFixed(2)+') + ('+p.toFixed(3)+' × '+q.toFixed(3)+' × '+wAa.toFixed(2)+')] / '+bar.toFixed(4)+' = <strong>'+qPrime.toFixed(4)+'</strong>';
+ }
  function render(){
    ['AA','Aa','aa'].forEach(g=>{$('v-'+g).textContent=Math.round(fit(g)*100)+'%';});
    $('generation').textContent=state.generation;
@@ -281,7 +355,13 @@ button:disabled{cursor:default}
    const pCurrent=state.selected&&state.pAdult!==null?state.pAdult:state.p,qCurrent=pCurrent===null?null:1-pCurrent;
    $('g-AA').textContent=f?f.AA.toFixed(3):'—';$('g-Aa').textContent=f?f.Aa.toFixed(3):'—';$('g-aa').textContent=f?f.aa.toFixed(3):'—';
    $('p-now').textContent=pCurrent===null?'—':pCurrent.toFixed(3);$('q-now').textContent=qCurrent===null?'—':qCurrent.toFixed(3);
-   $('select-btn').disabled=state.selected;$('next-btn').disabled=!state.selected||state.pAdult===null;$('p-start').disabled=state.generation>0||state.selected;
+   $('select-btn').disabled=state.animating||state.selected;
+   $('next-btn').disabled=state.animating||!state.selected||state.pAdult===null;
+   $('plus5-btn').disabled=state.animating;
+   $('restart-btn').disabled=state.animating;
+   $('p-start').disabled=state.animating||state.generation>0||state.selected;
+   $('n-icons').disabled=state.animating;
+   ['AA','Aa','aa'].forEach(g=>$('w-'+g).disabled=state.animating);
    if(!state.selected){
      $('stage-label').textContent='— HWE zygotes';$('selection-label').textContent='before selection';
      $('status').textContent='Adjust genotype fitnesses, then apply survival selection.';
@@ -293,11 +373,18 @@ button:disabled{cursor:default}
    }else{
      $('stage-label').textContent='— no survivors';$('selection-label').textContent='population extinct';$('status').textContent='No mice survive, so reproduction cannot occur.';$('math').textContent='w̄ = 0';
    }
+   if(state.animating){
+     $('status').textContent='Animating five generations: survival selection → reproduction → next generation.';
+   }
+   renderCalculations();
    drawMice();drawChart();
  }
  ['AA','Aa','aa'].forEach(g=>$('w-'+g).addEventListener('input',render));
  $('p-start').addEventListener('change',reset);$('n-icons').addEventListener('change',render);
- $('select-btn').addEventListener('click',select);$('next-btn').addEventListener('click',nextGeneration);$('restart-btn').addEventListener('click',reset);
+ $('select-btn').addEventListener('click',select);
+ $('next-btn').addEventListener('click',nextGeneration);
+ $('plus5-btn').addEventListener('click',advanceFive);
+ $('restart-btn').addEventListener('click',reset);
  state.zygote=hwe(state.p);render();
 })();
 </script>
