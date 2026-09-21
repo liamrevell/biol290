@@ -47,6 +47,23 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 .gA,.ga{display:flex;align-items:center;justify-content:center;font-weight:750;transition:width .35s ease}
 .gA{background:var(--blue)}
 .ga{background:var(--orange)}
+.poolLayout{display:grid;grid-template-columns:minmax(260px,1.1fr) minmax(220px,.9fr);gap:18px;align-items:center}
+.poolWrap{text-align:center}
+.genePool{position:relative;width:min(340px,100%);aspect-ratio:1/1;margin:0 auto;border:3px solid var(--border);border-radius:50%;background:radial-gradient(circle at 42% 35%,#fff 0 42%,#f3f4f6 100%);overflow:hidden}
+.geneDot{position:absolute;width:10px;height:10px;border-radius:50%;border:1px solid rgba(255,255,255,.8);box-shadow:0 0 0 1px rgba(31,41,55,.12);transition:opacity .18s ease,transform .18s ease}
+.geneDot.Acopy{background:var(--blue)}
+.geneDot.acopy{background:var(--orange)}
+.geneDot.used{opacity:0;transform:scale(.15)}
+.poolLegend{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:.8rem;color:var(--muted)}
+.legendDot{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:-1px;margin-right:4px}
+.pairingStage{border-top:1px solid var(--border);padding-top:12px}
+.pairingBoard{display:grid;grid-template-columns:repeat(10,minmax(24px,1fr));gap:4px;margin-top:8px}
+.zygMini{height:27px;border:1px solid var(--border);border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;gap:2px;animation:zygIn .18s ease-out}
+.miniAllele{width:8px;height:15px;border-radius:999px;display:inline-block}
+.miniAllele.Acopy{background:var(--blue)}
+.miniAllele.acopy{background:var(--orange)}
+@keyframes zygIn{from{opacity:0;transform:translateY(-5px) scale(.85)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.zygMini{animation:none}.geneDot{transition:none}}
 .formula{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 .fusion{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center}
 .gameteCard{text-align:center;border:1px solid var(--border);border-radius:12px;padding:10px}
@@ -60,7 +77,7 @@ table{width:100%;border-collapse:collapse;font-size:.88rem}
 th,td{padding:7px;border-bottom:1px solid var(--border);text-align:right}
 th:first-child,td:first-child{text-align:left}
 @media(max-width:850px){.layout{grid-template-columns:1fr}}
-@media(max-width:610px){.genoColumns{grid-template-columns:1fr}.fusion{grid-template-columns:1fr}.two,.three{grid-template-columns:1fr}}
+@media(max-width:610px){.genoColumns{grid-template-columns:1fr}.fusion{grid-template-columns:1fr}.two,.three{grid-template-columns:1fr}.poolLayout{grid-template-columns:1fr}.pairingBoard{grid-template-columns:repeat(8,minmax(22px,1fr))}}
 </style>
 </head>
 <body>
@@ -71,7 +88,7 @@ th:first-child,td:first-child{text-align:left}
 <div class="layout">
 <section class="panel">
   <b>Hardy–Weinberg challenge</b>
-  <div class="small muted mt2">There are exactly <strong>100 diploid adults</strong>, so there are 200 allele copies.</div>
+  <div id="populationSummary" class="small muted mt2"></div>
 
   <div class="card mt">
     <b>1. Determine p and q</b>
@@ -146,11 +163,32 @@ th:first-child,td:first-child{text-align:left}
     <div class="arrow">↓ meiosis ↓</div>
     <div class="card">
       <b>Exact gamete pool</b>
-      <div class="small muted mt2">No sampling is performed. The adults contribute an idealized pool of 200 gametes with exactly the same allele frequencies p and q.</div>
-      <div class="gbar mt"><div id="barA" class="gA"></div><div id="bara" class="ga"></div></div>
-      <div class="two mt2">
-        <div><div class="small muted">A gametes</div><div id="countA" class="big"></div></div>
-        <div><div class="small muted">a gametes</div><div id="counta" class="big"></div></div>
+      <div id="gameteSummary" class="small muted mt2"></div>
+
+      <div class="poolLayout mt">
+        <div class="poolWrap">
+          <div id="genePool" class="genePool" role="img" aria-label="Visual gene pool"></div>
+          <div class="small muted mt2">Each dot is one allele copy in the idealized gamete pool.</div>
+          <div class="poolLegend">
+            <span><span class="legendDot A"></span>A</span>
+            <span><span class="legendDot a"></span>a</span>
+          </div>
+        </div>
+
+        <div>
+          <div class="gbar"><div id="barA" class="gA"></div><div id="bara" class="ga"></div></div>
+          <div class="two mt2">
+            <div><div class="small muted">A copies</div><div id="countA" class="big"></div></div>
+            <div><div class="small muted">a copies</div><div id="counta" class="big"></div></div>
+          </div>
+          <div class="small muted mt">The dots are mixed visually, but their totals are exact. When you fuse gametes, copies are paired in a shuffled-looking order while preserving the exact Hardy–Weinberg outcome.</div>
+        </div>
+      </div>
+
+      <div id="pairingStage" class="pairingStage hidden mt">
+        <b>Pairing gene copies into zygotes</b>
+        <div id="pairingStatus" class="small muted mt2" aria-live="polite"></div>
+        <div id="pairingBoard" class="pairingBoard" aria-label="Zygotes being formed"></div>
       </div>
     </div>
   </div>
@@ -158,8 +196,8 @@ th:first-child,td:first-child{text-align:left}
   <div id="zygoteSection" class="hidden mt">
     <div class="arrow">↓ idealized random union of gametes ↓</div>
     <div class="card">
-      <b>100 zygotes at exact Hardy–Weinberg frequencies</b>
-      <div class="small muted mt2">“Random mating” determines the probabilities; the display uses the exact expected numbers rather than a stochastic sample.</div>
+      <b id="zygoteHeading"></b>
+      <div class="small muted mt2">The pairing animation above is only a visual shuffle. The displayed result is deterministic: exactly the Hardy–Weinberg expected numbers of AA, Aa, and aa zygotes are formed.</div>
 
       <div class="fusion mt">
         <div class="gameteCard">
@@ -204,8 +242,15 @@ th:first-child,td:first-child{text-align:left}
 <script>
 (()=>{
 const $=id=>document.getElementById(id),stages=[...document.querySelectorAll('.stage')];
-const pChoices=[.1,.2,.3,.4,.5,.6,.7,.8,.9];
-let truth=null,stage=0;
+const populationChoices=[75,80,100,120,125];
+const pChoicesByN={
+  75:[.2,.4,.6,.8],
+  80:[.5],
+  100:[.1,.2,.3,.4,.5,.6,.7,.8,.9],
+  120:[.5],
+  125:[.2,.4,.6,.8]
+};
+let truth=null,stage=0,fusionTimer=null;
 
 function setStage(n){
   stage=n;
@@ -213,6 +258,123 @@ function setStage(n){
     s.classList.toggle('active',i===n);
     s.classList.toggle('done',i<n);
   });
+}
+
+function makeRng(seed){
+  let s=seed>>>0;
+  return()=>{
+    s=(s+0x6D2B79F5)|0;
+    let t=Math.imul(s^(s>>>15),1|s);
+    t=(t+Math.imul(t^(t>>>7),61|t))^t;
+    return((t^(t>>>14))>>>0)/4294967296;
+  };
+}
+function shuffle(arr,rng){
+  for(let i=arr.length-1;i>0;i--){
+    const j=Math.floor(rng()*(i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+  return arr;
+}
+function visualSeed(){
+  return (truth.N*100000 + truth.counts.AA*1000 + truth.counts.Aa*10 + truth.h.AA + truth.h.Aa*17)>>>0;
+}
+function renderGenePool(){
+  const pool=$('genePool'),total=2*truth.N,nA=Math.round(total*truth.p);
+  const rng=makeRng(visualSeed());
+
+  const slots=[];
+  const step=14,margin=12;
+  for(let y=margin;y<=340-margin;y+=step){
+    for(let x=margin;x<=340-margin;x+=step){
+      const dx=x-170,dy=y-170;
+      if(dx*dx+dy*dy<154*154) slots.push({x,y});
+    }
+  }
+  shuffle(slots,rng);
+
+  const alleles=Array(nA).fill('A').concat(Array(total-nA).fill('a'));
+  shuffle(alleles,rng);
+
+  pool.innerHTML='';
+  const frag=document.createDocumentFragment();
+  for(let i=0;i<total;i++){
+    const d=document.createElement('span');
+    d.className='geneDot '+(alleles[i]==='A'?'Acopy':'acopy');
+    d.dataset.allele=alleles[i];
+    const pos=slots[i];
+    d.style.left=`calc(${(pos.x/340)*100}% - 5px)`;
+    d.style.top=`calc(${(pos.y/340)*100}% - 5px)`;
+    frag.appendChild(d);
+  }
+  pool.appendChild(frag);
+  pool.setAttribute('aria-label',`Gene pool containing ${nA} A copies and ${total-nA} a copies`);
+}
+function zygoteTile(g){
+  const alleles=g==='AA'?['A','A']:g==='Aa'?['A','a']:['a','a'];
+  const e=document.createElement('div');
+  e.className='zygMini';
+  e.setAttribute('aria-label',g);
+  e.innerHTML=`<span class="miniAllele ${alleles[0]==='A'?'Acopy':'acopy'}"></span><span class="miniAllele ${alleles[1]==='A'?'Acopy':'acopy'}"></span>`;
+  return e;
+}
+function zygoteSequence(){
+  const seq=[];
+  for(let i=0;i<truth.h.AA;i++)seq.push('AA');
+  for(let i=0;i<truth.h.Aa;i++)seq.push('Aa');
+  for(let i=0;i<truth.h.aa;i++)seq.push('aa');
+  return shuffle(seq,makeRng(visualSeed()+7919));
+}
+function finishFusion(){
+  $('zygoteSection').classList.remove('hidden');
+  renderCols('zygoteColumns',truth.h);
+  $('zygFA').textContent=truth.fAA.toFixed(2);
+  $('zygFH').textContent=truth.fAa.toFixed(2);
+  $('zygFa').textContent=truth.faa.toFixed(2);
+  $('zygNA').textContent=truth.h.AA;
+  $('zygNH').textContent=truth.h.Aa;
+  $('zygNa').textContent=truth.h.aa;
+  $('pairingStatus').innerHTML=`All <strong>${truth.N}</strong> zygotes formed. Exact result: <strong>${truth.h.AA} AA, ${truth.h.Aa} Aa, ${truth.h.aa} aa</strong>.`;
+  $('growBtn').disabled=false;
+}
+function animateFusion(){
+  if(fusionTimer)clearInterval(fusionTimer);
+  const seq=zygoteSequence(),board=$('pairingBoard');
+  const dotsA=[...document.querySelectorAll('#genePool .geneDot.Acopy')];
+  const dotsa=[...document.querySelectorAll('#genePool .geneDot.acopy')];
+  board.innerHTML='';
+  $('pairingStage').classList.remove('hidden');
+  $('pairingStatus').textContent=`0 of ${truth.N} zygotes formed…`;
+
+  let i=0;
+  const take=allele=>{
+    const arr=allele==='A'?dotsA:dotsa;
+    const d=arr.pop();
+    if(d)d.classList.add('used');
+  };
+  const addOne=()=>{
+    const g=seq[i++];
+    if(g==='AA'){take('A');take('A');}
+    else if(g==='Aa'){take('A');take('a');}
+    else{take('a');take('a');}
+    board.appendChild(zygoteTile(g));
+  };
+
+  if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+    while(i<seq.length)addOne();
+    finishFusion();
+    return;
+  }
+
+  fusionTimer=setInterval(()=>{
+    for(let k=0;k<4&&i<seq.length;k++)addOne();
+    $('pairingStatus').textContent=`${i} of ${truth.N} zygotes formed…`;
+    if(i>=seq.length){
+      clearInterval(fusionTimer);
+      fusionTimer=null;
+      finishFusion();
+    }
+  },55);
 }
 function person(g){
   const a=g==='AA'?['A','A']:g==='Aa'?['A','a']:['a','a'];
@@ -235,8 +397,10 @@ function renderCols(id,c){
   $(id).innerHTML=col('AA',c.AA)+col('Aa',c.Aa)+col('aa',c.aa);
 }
 function makeTruth(){
+  const N=populationChoices[Math.floor(Math.random()*populationChoices.length)];
+  const pChoices=pChoicesByN[N];
   const p=pChoices[Math.floor(Math.random()*pChoices.length)],q=1-p;
-  const h={AA:Math.round(100*p*p),Aa:Math.round(100*2*p*q),aa:Math.round(100*q*q)};
+  const h={AA:Math.round(N*p*p),Aa:Math.round(N*2*p*q),aa:Math.round(N*q*q)};
   const isHW=Math.random()<.5;
   let counts={...h};
 
@@ -252,7 +416,7 @@ function makeTruth(){
     }
   }
 
-  return{p,q,h,isHW,counts,fAA:p*p,fAa:2*p*q,faa:q*q};
+  return{N,p,q,h,isHW,counts,fAA:p*p,fAa:2*p*q,faa:q*q};
 }
 function feedback(id,ok,msg){
   const e=$(id);
@@ -260,12 +424,13 @@ function feedback(id,ok,msg){
   e.innerHTML=(ok?'<strong>Correct.</strong> ':'<strong>Incorrect.</strong> ')+msg;
 }
 function clearProgress(){
+  if(fusionTimer){clearInterval(fusionTimer);fusionTimer=null;}
   ['pGuess','qGuess','aaGuess1','hetGuess','aaGuess2'].forEach(id=>$(id).value='');
   ['pqFeedback','freqFeedback','eqFeedback'].forEach(id=>{
     $(id).className='feedback hidden mt2';
     $(id).textContent='';
   });
-  ['calcBox','eqBox','lifeBox','gameteSection','zygoteSection','adult2Section'].forEach(id=>$(id).classList.add('hidden'));
+  ['calcBox','eqBox','lifeBox','gameteSection','pairingStage','zygoteSection','adult2Section'].forEach(id=>$(id).classList.add('hidden'));
   $('gameteBtn').disabled=false;
   $('fusionBtn').disabled=true;
   $('growBtn').disabled=true;
@@ -275,15 +440,26 @@ function clearProgress(){
   $('bara').textContent='';
   $('countA').textContent='';
   $('counta').textContent='';
+  $('genePool').innerHTML='';
+  $('pairingBoard').innerHTML='';
+  $('pairingStatus').textContent='';
   setStage(0);
+}
+function updatePopulationText(){
+  const alleleCopies=2*truth.N;
+  $('populationSummary').innerHTML=`There are exactly <strong>${truth.N} diploid adults</strong>, so there are ${alleleCopies} allele copies.`;
+  $('gameteSummary').textContent=`No sampling is performed. The adults contribute an idealized pool of ${alleleCopies} gametes with exactly the same allele frequencies p and q.`;
+  $('zygoteHeading').textContent=`${truth.N} zygotes at exact Hardy–Weinberg frequencies`;
 }
 function newChallenge(){
   truth=makeTruth();
   clearProgress();
+  updatePopulationText();
   renderCols('adultColumns',truth.counts);
 }
 function restartChallenge(){
   clearProgress();
+  updatePopulationText();
   renderCols('adultColumns',truth.counts);
 }
 
@@ -293,7 +469,7 @@ $('checkPQ').addEventListener('click',()=>{
     feedback('pqFeedback',true,`p = ${truth.p.toFixed(1)} and q = ${truth.q.toFixed(1)}.`);
     $('calcBox').classList.remove('hidden');
   }else{
-    feedback('pqFeedback',false,'Count allele copies from the genotype columns. There are 200 allele copies total, and p + q = 1.');
+    feedback('pqFeedback',false,`Count allele copies from the genotype columns. There are ${2*truth.N} allele copies total, and p + q = 1.`);
   }
 });
 
@@ -314,7 +490,7 @@ function answer(ans){
       :'The observed genotype counts differ from the HWE expectation.');
     $('lifeBox').classList.remove('hidden');
   }else{
-    feedback('eqFeedback',false,'Because N = 100, each expected frequency × 100 is the exact expected genotype count. Compare those counts with the three columns.');
+    feedback('eqFeedback',false,`Because N = ${truth.N}, each expected frequency × ${truth.N} is the exact expected genotype count. Compare those counts with the three columns.`);
   }
 }
 $('yesBtn').addEventListener('click',()=>answer(true));
@@ -323,29 +499,23 @@ $('noBtn').addEventListener('click',()=>answer(false));
 $('gameteBtn').addEventListener('click',()=>{
   setStage(1);
   $('gameteSection').classList.remove('hidden');
-  const nA=Math.round(200*truth.p),na=200-nA;
+  const totalGametes=2*truth.N,nA=Math.round(totalGametes*truth.p),na=totalGametes-nA;
   $('barA').style.width=(100*truth.p)+'%';
   $('bara').style.width=(100*truth.q)+'%';
   $('barA').textContent=`A ${nA}`;
   $('bara').textContent=`a ${na}`;
   $('countA').textContent=nA;
   $('counta').textContent=na;
+  renderGenePool();
   $('gameteBtn').disabled=true;
   $('fusionBtn').disabled=false;
 });
 
 $('fusionBtn').addEventListener('click',()=>{
   setStage(2);
-  $('zygoteSection').classList.remove('hidden');
-  renderCols('zygoteColumns',truth.h);
-  $('zygFA').textContent=truth.fAA.toFixed(2);
-  $('zygFH').textContent=truth.fAa.toFixed(2);
-  $('zygFa').textContent=truth.faa.toFixed(2);
-  $('zygNA').textContent=truth.h.AA;
-  $('zygNH').textContent=truth.h.Aa;
-  $('zygNa').textContent=truth.h.aa;
   $('fusionBtn').disabled=true;
-  $('growBtn').disabled=false;
+  $('growBtn').disabled=true;
+  animateFusion();
 });
 
 $('growBtn').addEventListener('click',()=>{
