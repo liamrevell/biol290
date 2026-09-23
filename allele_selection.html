@@ -87,6 +87,7 @@
   .gridline{stroke:var(--border);stroke-width:1;opacity:.7}
   .traj{fill:none;stroke:var(--s2);stroke-width:3;stroke-linejoin:round;stroke-linecap:round}
   .future{fill:none;stroke:var(--s2);stroke-width:2;opacity:.18;stroke-linejoin:round}
+  .lockedTraj{fill:none;stroke:var(--s4);stroke-width:3;stroke-dasharray:8 5;stroke-linejoin:round;stroke-linecap:round;opacity:.9}
   .marker{fill:var(--s3);stroke:var(--card);stroke-width:2}
   .eqLine{stroke:var(--s5);stroke-width:2;stroke-dasharray:6 5;opacity:.8}
   .barBg{fill:#f3f4f6;stroke:var(--border)}
@@ -163,6 +164,8 @@
           <button id="play" type="button" class="primary">▶ Play</button>
           <button id="pause" type="button" class="secondary">Pause</button>
           <button id="reset" type="button" class="secondary">Reset</button>
+          <button id="lock" type="button" class="secondary">Lock run</button>
+          <button id="clearLock" type="button" class="secondary" disabled>Clear locked</button>
         </div>
         <div id="validation" class="muted mt" aria-live="polite"></div>
       </section>
@@ -194,6 +197,7 @@
             <svg id="chart" viewBox="0 0 700 320" role="img" aria-label="Allele A frequency through generations">
               <g id="grid"></g>
               <path id="futurePath" class="future"></path>
+              <path id="lockedPath" class="lockedTraj"></path>
               <line id="eqLine" class="eqLine" x1="55" x2="680" y1="0" y2="0" visibility="hidden"></line>
               <path id="trajPath" class="traj"></path>
               <circle id="marker" class="marker" r="6" cx="55" cy="25"></circle>
@@ -206,6 +210,7 @@
             </svg>
           </div>
           <div id="eqLabel" class="muted hidden">Dashed line = equilibrium frequency.</div>
+          <div id="lockStatus" class="muted hidden" style="margin-top:5px;color:var(--s4)">Orange dashed line = locked comparison run.</div>
         </div>
       </section>
     </div>
@@ -245,12 +250,13 @@
   const root = document.getElementById('alleleSelApp');
   const $ = id => root.querySelector('#' + id);
   const p0=$('p0'), wAA=$('wAA'), wAa=$('wAa'), waa=$('waa'), gens=$('gens'), speed=$('speed');
-  const play=$('play'), pause=$('pause'), reset=$('reset'), preset=$('preset');
-  const path=$('trajPath'), futurePath=$('futurePath'), marker=$('marker'), grid=$('grid'), eqLine=$('eqLine'), eqLabel=$('eqLabel');
+  const play=$('play'), pause=$('pause'), reset=$('reset'), lockBtn=$('lock'), clearLock=$('clearLock'), preset=$('preset');
+  const path=$('trajPath'), futurePath=$('futurePath'), lockedPath=$('lockedPath'), marker=$('marker'), grid=$('grid'), eqLine=$('eqLine'), eqLabel=$('eqLabel'), lockStatus=$('lockStatus');
   const genNow=$('genNow'), pNow=$('pNow'), meanW=$('meanW'), validation=$('validation'), fate=$('fate');
   const deltaP=$('deltaP'), pEnd=$('pEnd'), pEq=$('pEq'), genoBars=$('genoBars'), xMid=$('xMid'), xEnd=$('xEnd');
 
   let traj=[], current=0, timer=null, invalidAt=null;
+  let locked=null;
   const x0=55, x1=680, y0=25, y1=295;
 
   const clamp = (v,a,b) => Math.min(b, Math.max(a,v));
@@ -298,12 +304,17 @@
       : 'Mean fitness reaches zero, so no surviving parents remain and the recurrence stops.';
 
     current=0;
-    drawGrid(v.n);
+    drawGrid(axisGenerations(v.n));
     drawFuture();
+    drawLocked();
     describeFate(v);
     update(0);
     return true;
+  }  function axisGenerations(currentN=values().n){
+    return Math.max(currentN, locked ? locked.n : 0, 1);
   }
+
+
 
   function drawGrid(n){
     let s='';
@@ -322,11 +333,10 @@
     return [x0+(i/n)*(x1-x0), y1-p*(y1-y0)];
   }
 
-  function makePath(arr,end){
-    const n=Math.max(1,values().n);
+  function makePath(arr,end,axisN=axisGenerations()){
     let d='';
     for(let i=0;i<=end && i<arr.length;i++){
-      const [x,y]=point(i,arr[i],n);
+      const [x,y]=point(i,arr[i],axisN);
       d += (i ? ' L ' : 'M ') + x.toFixed(2) + ' ' + y.toFixed(2);
     }
     return d;
@@ -336,15 +346,28 @@
     futurePath.setAttribute('d',makePath(traj,traj.length-1));
   }
 
+  function drawLocked(){
+    if(!locked){
+      lockedPath.setAttribute('d','');
+      lockStatus.classList.add('hidden');
+      clearLock.disabled=true;
+      return;
+    }
+    lockedPath.setAttribute('d',makePath(locked.traj,locked.traj.length-1));
+    lockStatus.classList.remove('hidden');
+    clearLock.disabled=false;
+  }
+
   function update(i){
     if(!traj.length) return;
     current=clamp(i,0,traj.length-1);
 
     const v=values();
     const p=traj[current];
-    path.setAttribute('d',makePath(traj,current));
+    const axisN=axisGenerations(v.n);
+    path.setAttribute('d',makePath(traj,current,axisN));
 
-    const [x,y]=point(current,p,v.n);
+    const [x,y]=point(current,p,axisN);
     marker.setAttribute('cx',x);
     marker.setAttribute('cy',y);
 
@@ -470,7 +493,33 @@
       preset.value='custom';
       build();
     })
-  );
+  );  lockBtn.addEventListener('click',()=>{
+    stop();
+    const v=values();
+    locked={
+      traj:[...traj],
+      n:v.n,
+      p:v.p,
+      A:v.A,
+      H:v.H,
+      a:v.a
+    };
+    drawGrid(axisGenerations(v.n));
+    drawFuture();
+    drawLocked();
+    update(current);
+  });
+
+  clearLock.addEventListener('click',()=>{
+    locked=null;
+    const v=values();
+    drawGrid(v.n);
+    drawFuture();
+    drawLocked();
+    update(current);
+  });
+
+
 
   preset.addEventListener('change',applyPreset);
   play.addEventListener('click',start);
