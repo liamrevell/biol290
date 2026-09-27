@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>From Additive Loci to a Quantitative Trait</title>
+<style>
+  :root {
+    --bg: #f5f7fb;
+    --panel: #ffffff;
+    --border: #d7dce5;
+    --text: #1f2937;
+    --muted: #5b6678;
+    --accent: #d84f94;
+    --accent2: #3db8b6;
+    --button: #e9eef8;
+    --button-strong: #dce7ff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.35;
+  }
+  .wrap {
+    max-width: 1300px;
+    margin: 0 auto;
+    padding: 18px;
+  }
+  h1 {
+    margin: 0 0 6px 0;
+    font-size: 1.6rem;
+  }
+  .subtitle {
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    gap: 16px;
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+  }
+  .stack { display: grid; gap: 16px; }
+  .section-title {
+    font-weight: 700;
+    font-size: 1.05rem;
+    margin-bottom: 4px;
+  }
+  .muted { color: var(--muted); }
+  label, legend { font-weight: 600; font-size: 0.95rem; }
+  input[type="range"] { width: 100%; margin-top: 8px; }
+  .small { font-size: 0.83rem; color: var(--muted); }
+  .spread { display: flex; justify-content: space-between; gap: 8px; }
+  .radio-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-weight: 500; }
+  fieldset { border: 0; padding: 0; margin: 0; }
+  button {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--button);
+    padding: 10px 12px;
+    font-size: 0.95rem;
+    cursor: pointer;
+  }
+  button:hover { filter: brightness(0.985); }
+  .primary { background: var(--button-strong); }
+  .stats {
+    font-size: 0.95rem;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .freq-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .freq-cell { text-align: center; font-size: 0.72rem; }
+  .freq-bar-box {
+    height: 58px;
+    width: 18px;
+    margin: 0 auto 4px auto;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    display: flex;
+    align-items: end;
+    overflow: hidden;
+    background: #fafbfd;
+  }
+  .freq-fill { width: 100%; background: var(--accent); opacity: 0.8; }
+  svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .row-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: baseline;
+    flex-wrap: wrap;
+  }
+  .takeaway {
+    background: #fbfcff;
+  }
+  .mono { font-variant-numeric: tabular-nums; }
+  .download-link {
+    display: inline-block;
+    margin-top: 10px;
+    font-size: 0.95rem;
+  }
+  @media (max-width: 960px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>From Additive Loci to a Quantitative Trait</h1>
+  <div class="subtitle">Each uppercase allele contributes <strong>1/n</strong> when there are <em>n</em> loci. Explore how additive effects across many loci generate an increasingly smooth trait distribution.</div>
+
+  <div class="grid">
+    <section class="card">
+      <div class="section-title">Build a polygenic trait</div>
+      <div class="muted small">With <em>n</em> loci, every uppercase allele contributes <strong>1/n</strong> to the phenotype.</div>
+
+      <div style="margin-top:14px;">
+        <label for="loci">Number of loci: <span id="lociVal" class="mono">1</span></label>
+        <input id="loci" type="range" min="1" max="20" step="1" value="1" />
+        <div class="spread small"><span>1</span><span>20</span></div>
+      </div>
+
+      <fieldset style="margin-top:14px;">
+        <legend>Allele frequencies</legend>
+        <label class="radio-row"><input type="radio" name="mode" value="equal" checked /> p = 0.50 at every locus</label>
+        <label class="radio-row"><input type="radio" name="mode" value="random" /> Different random p at each locus</label>
+      </fieldset>
+
+      <div style="margin-top:10px;"><button id="reroll">New random frequencies</button></div>
+
+      <div style="margin-top:14px;">
+        <label for="env">Environmental SD: <span id="envVal" class="mono">0.00</span></label>
+        <input id="env" type="range" min="0" max="0.5" step="0.01" value="0" />
+        <div class="spread small"><span>none</span><span>0.50 trait units</span></div>
+      </div>
+
+      <label class="radio-row" style="margin-top:14px;"><input id="showNormal" type="checkbox" checked /> Show matching normal curve</label>
+
+      <div style="margin-top:10px;"><button id="resample" class="primary">Generate new population</button></div>
+
+      <div class="card" style="padding:12px; margin-top:14px; border-radius:10px;">
+        <div style="font-weight:700; margin-bottom:4px;">Genetic model</div>
+        <div id="modelText" class="small"></div>
+      </div>
+
+      <a class="download-link" href="./polygenic_trait_interactive.html" download>Download this HTML file</a>
+    </section>
+
+    <div class="stack">
+      <section class="card">
+        <div class="row-head">
+          <div>
+            <div class="section-title">Allele frequencies</div>
+            <div class="small">The loci can have different allele frequencies.</div>
+          </div>
+          <div id="freqRange" class="small mono"></div>
+        </div>
+        <div id="freqGrid" class="freq-grid"></div>
+      </section>
+
+      <section class="card">
+        <div class="row-head">
+          <div>
+            <div class="section-title">Genetic contribution</div>
+            <div class="small">Each stem-dot mark is an exact possible genetic value. The phenotype scale is always 0 to 2.</div>
+          </div>
+          <div id="genStats" class="stats mono"></div>
+        </div>
+        <svg id="genPlot" viewBox="0 0 760 300" aria-label="Genetic contribution plot"></svg>
+      </section>
+
+      <section class="card">
+        <div class="row-head">
+          <div>
+            <div class="section-title">Phenotype = genetic contribution + environment</div>
+            <div id="phenDesc" class="small"></div>
+          </div>
+          <div id="varStats" class="stats mono"></div>
+        </div>
+        <svg id="phenPlot" viewBox="0 0 760 300" aria-label="Phenotype plot"></svg>
+        <div class="small" style="margin-top:8px;">The normal curve uses the theoretical phenotype mean and variance; it is shown only as a reference for shape.</div>
+      </section>
+
+      <section class="card takeaway">
+        <div id="takeawayText" class="small" style="font-size:0.95rem;"></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const N = 20000;
+  const MAX_LOCI = 20;
+  const genPlot = document.getElementById('genPlot');
+  const phenPlot = document.getElementById('phenPlot');
+  const lociInput = document.getElementById('loci');
+  const envInput = document.getElementById('env');
+  const lociVal = document.getElementById('lociVal');
+  const envVal = document.getElementById('envVal');
+  const showNormal = document.getElementById('showNormal');
+  const freqGrid = document.getElementById('freqGrid');
+  const freqRange = document.getElementById('freqRange');
+  const genStats = document.getElementById('genStats');
+  const varStats = document.getElementById('varStats');
+  const phenDesc = document.getElementById('phenDesc');
+  const takeawayText = document.getElementById('takeawayText');
+  const modelText = document.getElementById('modelText');
+
+  function newRandomP() {
+    return Array.from({length: MAX_LOCI}, () => Math.round((0.05 + Math.random() * 0.90) * 100) / 100);
+  }
+
+  let randomP = newRandomP();
+  let sample = [];
+
+  const randn = () => {
+    let u = 0, v = 0;
+    while (u === 0) u = Math.random();
+    while (v === 0) v = Math.random();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  };
+
+  const mode = () => document.querySelector('input[name="mode"]:checked').value;
+  const L = () => +lociInput.value;
+  const envSD = () => +envInput.value;
+  const ps = () => mode() === 'equal' ? Array(L()).fill(0.5) : randomP.slice(0, L());
+
+  function theory() {
+    const n = L();
+    const p = ps();
+    let pmf = [1];
+    for (const f of p) {
+      const q = 1 - f;
+      const locus = [q*q, 2*f*q, f*f];
+      const next = Array(pmf.length + 2).fill(0);
+      pmf.forEach((a, i) => locus.forEach((b, j) => next[i + j] += a * b));
+      pmf = next;
+    }
+    const mu = 2 * p.reduce((s, x) => s + x, 0) / n;
+    const vg = p.reduce((s, x) => s + 2 * x * (1 - x), 0) / (n * n);
+    const ve = envSD() * envSD();
+    const vp = vg + ve;
+    return { n, p, pmf, mu, vg, ve, vp, sdP: Math.sqrt(vp) };
+  }
+
+  function simulate() {
+    const t = theory();
+    const e = envSD();
+    sample = Array.from({length: N}, () => {
+      let upper = 0;
+      for (const f of t.p) {
+        if (Math.random() < f) upper++;
+        if (Math.random() < f) upper++;
+      }
+      const g = upper / t.n;
+      return { g, y: g + e * randn() };
+    });
+  }
+
+  function normalPDF(x, mu, sd) {
+    if (!(sd > 0)) return 0;
+    const z = (x - mu) / sd;
+    return Math.exp(-0.5 * z * z) / (sd * Math.sqrt(2 * Math.PI));
+  }
+
+  function fmt(x, k = 3) {
+    return Number(x).toFixed(k);
+  }
+
+  function renderFreqs() {
+    const p = ps();
+    freqGrid.innerHTML = '';
+    p.forEach((x, i) => {
+      const cell = document.createElement('div');
+      cell.className = 'freq-cell';
+      const barBox = document.createElement('div');
+      barBox.className = 'freq-bar-box';
+      const fill = document.createElement('div');
+      fill.className = 'freq-fill';
+      fill.style.height = Math.max(3, Math.round(x * 56)) + 'px';
+      barBox.appendChild(fill);
+      cell.appendChild(barBox);
+      cell.innerHTML += `<div class="muted">${i+1}</div><div class="mono">${x.toFixed(2)}</div>`;
+      cell.prepend(barBox);
+      freqGrid.appendChild(cell);
+    });
+    const mn = Math.min(...p), mx = Math.max(...p);
+    freqRange.textContent = mode() === 'equal' ? 'all p = 0.50' : `p ranges ${mn.toFixed(2)}–${mx.toFixed(2)}`;
+  }
+
+  function axisSVG({W,H,m,xmin,xmax,ymax,xlabel,ylabel,tickStep}) {
+    const X = x => m.l + (x - xmin) / (xmax - xmin) * (W - m.l - m.r);
+    const Y = y => H - m.b - y / ymax * (H - m.t - m.b);
+    let s = '';
+    s += `<line x1="${m.l}" y1="${H-m.b}" x2="${W-m.r}" y2="${H-m.b}" stroke="#333"/>`;
+    s += `<line x1="${m.l}" y1="${m.t}" x2="${m.l}" y2="${H-m.b}" stroke="#333"/>`;
+
+    const step = tickStep;
+    const start = Math.ceil(xmin / step) * step;
+    for (let x = start; x <= xmax + 1e-9; x += step) {
+      const label = Math.abs(x) < 1e-10 ? 0 : x;
+      const text = step < 0.5 ? label.toFixed(2).replace(/\.00$/,'').replace(/0$/,'') : label.toFixed(1).replace(/\.0$/,'');
+      s += `<line x1="${X(x)}" y1="${H-m.b}" x2="${X(x)}" y2="${H-m.b+5}" stroke="#333"/>`;
+      s += `<text x="${X(x)}" y="${H-m.b+20}" text-anchor="middle" font-size="11" fill="#586174">${text}</text>`;
+    }
+
+    s += `<text x="${(m.l + W - m.r)/2}" y="${H-8}" text-anchor="middle" font-size="13" fill="#586174">${xlabel}</text>`;
+    s += `<text x="12" y="18" font-size="12" fill="#586174">${ylabel}</text>`;
+    return { X, Y, base: s };
+  }
+
+  function phenotypeDomain() {
+    const t = theory();
+    const e = envSD();
+    if (e === 0) return [-0.08, 2.08];
+    return [Math.min(-0.08, t.mu - 4 * t.sdP), Math.max(2.08, t.mu + 4 * t.sdP)];
+  }
+
+  function renderGenetic() {
+    const t = theory();
+    const W = 760, H = 300, m = {l: 50, r: 18, t: 18, b: 44};
+    const xmin = -0.08, xmax = 2.08;
+    const points = t.pmf.map((prob, k) => ({ x: k / t.n, prob }));
+    const ymax = Math.max(...points.map(d => d.prob), 0.05) * 1.18;
+    const ax = axisSVG({W,H,m,xmin,xmax,ymax,xlabel:'genetic contribution to phenotype', ylabel:'probability', tickStep:0.25});
+    const {X,Y} = ax;
+    let s = ax.base;
+
+    points.forEach(d => {
+      if (d.prob <= 0) return;
+      s += `<line x1="${X(d.x)}" y1="${Y(0)}" x2="${X(d.x)}" y2="${Y(d.prob)}" stroke="#d84f94" stroke-width="4" stroke-linecap="round"/>`;
+      s += `<circle cx="${X(d.x)}" cy="${Y(d.prob)}" r="5" fill="#d84f94"/>`;
+    });
+
+    genPlot.innerHTML = s;
+  }
+
+  function renderPhenotype() {
+    const t = theory();
+    const W = 760, H = 300, m = {l: 50, r: 18, t: 18, b: 44};
+    const [xmin, xmax] = phenotypeDomain();
+    const tickStep = (xmax - xmin) > 3 ? 0.5 : 0.25;
+
+    if (envSD() === 0) {
+      const points = t.pmf.map((prob, k) => ({ x: k / t.n, prob }));
+      const peak = Math.max(...points.map(d => d.prob), 0.01);
+      const ymax = peak * 1.15;
+      const ax = axisSVG({W,H,m,xmin,xmax,ymax,xlabel:'phenotype', ylabel:'relative frequency', tickStep});
+      const {X,Y} = ax;
+      let s = ax.base;
+      const step = 1 / t.n;
+      const barPx = Math.max(4, Math.min(26, Math.abs(X(step) - X(0)) * 0.55));
+
+      points.forEach(d => {
+        if (d.prob <= 0) return;
+        s += `<rect x="${X(d.x)-barPx/2}" y="${Y(d.prob)}" width="${barPx}" height="${H-m.b-Y(d.prob)}" rx="1.5" fill="#3db8b6" opacity="0.84"/>`;
+      });
+
+      if (showNormal.checked && t.vg > 0) {
+        const sd = Math.sqrt(t.vg);
+        const normalPeak = normalPDF(t.mu, t.mu, sd);
+        const scale = peak / normalPeak;
+        let path = '';
+        for (let i = 0; i <= 260; i++) {
+          const x = xmin + (xmax - xmin) * i / 260;
+          const y = normalPDF(x, t.mu, sd) * scale;
+          path += (i ? 'L' : 'M') + X(x).toFixed(2) + ',' + Y(y).toFixed(2);
+        }
+        s += `<path d="${path}" fill="none" stroke="#111" stroke-width="2.2"/>`;
+      }
+      phenPlot.innerHTML = s;
+      phenDesc.textContent = 'With environmental variation set to zero, phenotype equals the additive genetic contribution.';
+      return;
+    }
+
+    const binW = 0.05;
+    const firstCenter = Math.floor(xmin / binW) * binW;
+    const lastCenter = Math.ceil(xmax / binW) * binW;
+    const nBins = Math.round((lastCenter - firstCenter) / binW) + 1;
+    const counts = Array(nBins).fill(0);
+
+    sample.forEach(d => {
+      const idx = Math.round((d.y - firstCenter) / binW);
+      if (idx >= 0 && idx < nBins) counts[idx]++;
+    });
+
+    const density = counts.map(c => c / (sample.length * binW));
+    const peak = Math.max(...density, 0.01);
+    const ymax = peak * 1.12;
+    const ax = axisSVG({W,H,m,xmin,xmax,ymax,xlabel:'phenotype', ylabel:'relative density', tickStep});
+    const {X,Y} = ax;
+    let s = ax.base;
+    const barPx = Math.max(1, Math.abs(X(binW) - X(0)) * 0.92);
+
+    density.forEach((d, i) => {
+      const center = firstCenter + i * binW;
+      if (d <= 0) return;
+      s += `<rect x="${X(center)-barPx/2}" y="${Y(d)}" width="${barPx}" height="${H-m.b-Y(d)}" fill="#3db8b6" opacity="0.84"/>`;
+    });
+
+    if (showNormal.checked && t.sdP > 0) {
+      const normalPeak = normalPDF(t.mu, t.mu, t.sdP);
+      const scale = peak / normalPeak;
+      let path = '';
+      for (let i = 0; i <= 260; i++) {
+        const x = xmin + (xmax - xmin) * i / 260;
+        const y = normalPDF(x, t.mu, t.sdP) * scale;
+        path += (i ? 'L' : 'M') + X(x).toFixed(2) + ',' + Y(y).toFixed(2);
+      }
+      s += `<path d="${path}" fill="none" stroke="#111" stroke-width="2.2"/>`;
+    }
+
+    phenPlot.innerHTML = s;
+    phenDesc.textContent = 'Environmental variation is added directly to the genetic contribution in the same trait units.';
+  }
+
+  function renderStats() {
+    const t = theory();
+    const n = t.n;
+    modelText.innerHTML = `Each uppercase allele contributes <strong>${(1/n).toFixed(n <= 4 ? 2 : 3)}</strong>. Thus aa contributes 0, Aa contributes 1/${n}, and AA contributes 2/${n} at each locus. The total genetic value ranges from 0 to 2.`;
+    genStats.innerHTML = `E[G] = ${fmt(t.mu,3)} &nbsp; V<sub>G</sub> = ${fmt(t.vg,4)}`;
+    varStats.innerHTML = `V<sub>E</sub> = ${fmt(t.ve,4)} &nbsp; V<sub>P</sub> = ${fmt(t.vp,4)}`;
+  }
+
+  function renderTakeaway() {
+    const n = L();
+    const unequal = mode() === 'random';
+    const e = envSD();
+    let msg;
+    if (n === 1) msg = 'With one locus, only three genetic values are possible: 0, 1, and 2.';
+    else if (n <= 4) msg = `With ${n} loci, there are ${2*n+1} possible additive genetic values spaced ${(1/n).toFixed(2)} units apart.`;
+    else if (n <= 9) msg = `With ${n} additive loci, the many possible allele combinations are beginning to produce a smooth, bell-shaped distribution${unequal ? ', even though allele frequencies differ among loci' : ''}.`;
+    else msg = `With ${n} additive loci, the genetic distribution is approaching a normal shape${unequal ? ' despite substantial differences in allele frequency among loci' : ''}.`;
+    const envText = e === 0
+      ? ' Environmental variation is zero, so the phenotype shown here is entirely genetic.'
+      : ' Environmental variation smooths the phenotype further, but the many-locus tendency toward normality is already generated by additive genetic effects.';
+    takeawayText.innerHTML = `<strong>What to notice:</strong> ${msg}${envText}`;
+  }
+
+  function render(resim = true) {
+    lociVal.textContent = L();
+    envVal.textContent = envSD().toFixed(2);
+    if (resim) simulate();
+    renderFreqs();
+    renderStats();
+    renderGenetic();
+    renderPhenotype();
+    renderTakeaway();
+  }
+
+  lociInput.addEventListener('input', () => render(true));
+  envInput.addEventListener('input', () => render(true));
+  showNormal.addEventListener('change', () => render(false));
+  document.querySelectorAll('input[name="mode"]').forEach(el => el.addEventListener('change', () => render(true)));
+  document.getElementById('reroll').addEventListener('click', () => { randomP = newRandomP(); if (mode() === 'random') render(true); });
+  document.getElementById('resample').addEventListener('click', () => render(true));
+
+  render(true);
+})();
+</script>
+</body>
+</html>
