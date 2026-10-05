@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hawk–Dove Game: Frequency-Dependent Selection</title>
+<style>
+  :root {
+    --bg: #f5f7fb;
+    --panel: #ffffff;
+    --border: #d7dce5;
+    --text: #1f2937;
+    --muted: #5b6678;
+    --accent: #d84f94;
+    --accent2: #3db8b6;
+    --button: #e9eef8;
+    --button-strong: #dce7ff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.35;
+  }
+  .wrap {
+    max-width: 1300px;
+    margin: 0 auto;
+    padding: 18px;
+  }
+  h1 {
+    margin: 0 0 6px 0;
+    font-size: 1.6rem;
+  }
+  .subtitle {
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    gap: 16px;
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+  }
+  .stack { display: grid; gap: 16px; }
+  .section-title {
+    font-weight: 700;
+    font-size: 1.05rem;
+    margin-bottom: 4px;
+  }
+  .muted { color: var(--muted); }
+  .small { font-size: 0.83rem; color: var(--muted); }
+  .spread { display: flex; justify-content: space-between; gap: 8px; }
+  .mono { font-variant-numeric: tabular-nums; }
+  label { font-weight: 600; font-size: 0.95rem; }
+  input[type="range"] { width: 100%; margin-top: 8px; }
+  button {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--button);
+    padding: 10px 12px;
+    font-size: 0.95rem;
+    cursor: pointer;
+  }
+  button:hover { filter: brightness(0.985); }
+  .primary { background: var(--button-strong); }
+  .button-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .row-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: baseline;
+    flex-wrap: wrap;
+  }
+  .stats {
+    font-size: 0.95rem;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  table {
+    border-collapse: collapse;
+    margin: 14px auto 0;
+    width: min(640px, 100%);
+  }
+  th, td {
+    border: 1px solid var(--border);
+    padding: 12px 10px;
+    text-align: center;
+  }
+  th:first-child { text-align: left; }
+  thead th:first-child { border: 0; background: transparent; }
+  .hawk { color: var(--accent); }
+  .dove { color: var(--accent2); }
+  .payoff-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .mini-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 11px 12px;
+    font-size: 0.92rem;
+  }
+  svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .takeaway { background: #fbfcff; }
+  .download-link {
+    display: inline-block;
+    margin-top: 10px;
+    font-size: 0.95rem;
+  }
+  .equation {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 1rem;
+  }
+  @media (max-width: 960px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 540px) {
+    .payoff-cards, .button-grid { grid-template-columns: 1fr; }
+    th, td { padding: 9px 6px; font-size: 0.86rem; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Hawk–Dove Game: Frequency-Dependent Selection</h1>
+  <div class="subtitle">Explore how the fitness of Hawk and Dove strategies depends on how common each strategy is in the population.</div>
+
+  <div class="grid">
+    <section class="card">
+      <div class="section-title">Set up the game</div>
+      <div class="small">Hawks escalate contests. Doves display, but retreat when challenged by a Hawk.</div>
+
+      <div style="margin-top:14px;">
+        <label for="resource">Resource value, V: <span id="resourceVal" class="mono">4</span></label>
+        <input id="resource" type="range" min="1" max="10" step="1" value="4" />
+        <div class="spread small"><span>1</span><span>10</span></div>
+      </div>
+
+      <div style="margin-top:14px;">
+        <label for="cost">Cost of fighting, C: <span id="costVal" class="mono">8</span></label>
+        <input id="cost" type="range" min="1" max="20" step="1" value="8" />
+        <div class="spread small"><span>1</span><span>20</span></div>
+      </div>
+
+      <div style="margin-top:14px;">
+        <label for="startP">Starting frequency of Hawks: <span id="startPVal" class="mono">0.20</span></label>
+        <input id="startP" type="range" min="0.01" max="0.99" step="0.01" value="0.20" />
+        <div class="spread small"><span>mostly Doves</span><span>mostly Hawks</span></div>
+      </div>
+
+      <div class="button-grid" style="margin-top:14px;">
+        <button id="stepOne">One step</button>
+        <button id="stepTwenty" class="primary">+20 steps</button>
+      </div>
+      <button id="reset" style="margin-top:8px;">Reset population</button>
+
+      <div class="card" style="padding:12px; margin-top:14px; border-radius:10px;">
+        <div style="font-weight:700; margin-bottom:4px;">ESS prediction</div>
+        <div id="essText" class="small"></div>
+      </div>
+
+      <div class="card" style="padding:12px; margin-top:10px; border-radius:10px;">
+        <div style="font-weight:700; margin-bottom:4px;">Selection rule</div>
+        <div class="small">The simulation uses a scaled replicator equation:</div>
+        <div class="equation" style="margin-top:5px;">Δp ∝ p(1 − p)(W<sub>H</sub> − W<sub>D</sub>)</div>
+      </div>
+
+      <a class="download-link" href="./hawk_dove.html" download>Download this HTML file</a>
+    </section>
+
+    <div class="stack">
+      <section class="card">
+        <div class="row-head">
+          <div>
+            <div class="section-title">1. Payoff matrix</div>
+            <div class="small">Entries are the expected payoff to the strategy in the row.</div>
+          </div>
+          <div id="currentFreq" class="stats mono"></div>
+        </div>
+
+        <table aria-label="Hawk-Dove payoff matrix">
+          <thead>
+            <tr>
+              <th></th>
+              <th class="hawk">Opponent Hawk</th>
+              <th class="dove">Opponent Dove</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th class="hawk">Hawk</th>
+              <td id="hh"></td>
+              <td id="hd"></td>
+            </tr>
+            <tr>
+              <th class="dove">Dove</th>
+              <td id="dh"></td>
+              <td id="dd"></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="payoff-cards">
+          <div class="mini-card"><strong class="hawk">Hawk payoff now:</strong> <span id="hawkPayoff" class="mono"></span></div>
+          <div class="mini-card"><strong class="dove">Dove payoff now:</strong> <span id="dovePayoff" class="mono"></span></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="row-head">
+          <div>
+            <div class="section-title">2. Payoff depends on population composition</div>
+            <div class="small">The better strategy changes as the frequency of Hawks changes. The intersection marks equal expected payoff.</div>
+          </div>
+        </div>
+        <svg id="payoffPlot" viewBox="0 0 760 310" aria-label="Expected Hawk and Dove payoffs versus Hawk frequency"></svg>
+      </section>
+
+      <section class="card">
+        <div class="row-head">
+          <div>
+            <div class="section-title">3. Frequency-dependent evolution</div>
+            <div class="small">Watch the frequency of Hawks change through selection steps.</div>
+          </div>
+          <div id="stepStats" class="stats mono"></div>
+        </div>
+        <svg id="dynamicsPlot" viewBox="0 0 760 290" aria-label="Hawk frequency through selection steps"></svg>
+      </section>
+
+      <section class="card takeaway">
+        <div id="takeawayText" style="font-size:0.95rem;"></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const resource = document.getElementById('resource');
+  const cost = document.getElementById('cost');
+  const startP = document.getElementById('startP');
+  const resourceVal = document.getElementById('resourceVal');
+  const costVal = document.getElementById('costVal');
+  const startPVal = document.getElementById('startPVal');
+
+  const V = () => +resource.value;
+  const C = () => +cost.value;
+  const initialP = () => +startP.value;
+
+  let p = initialP();
+  let history = [p];
+
+  function payoffs(x) {
+    const v = V();
+    const c = C();
+    const hawk = x * (v - c) / 2 + (1 - x) * v;
+    const dove = (1 - x) * v / 2;
+    return { hawk, dove };
+  }
+
+  function equilibrium() {
+    return V() < C() ? V() / C() : 1;
+  }
+
+  function format(x, digits = 2) {
+    const y = Math.abs(x) < 1e-12 ? 0 : x;
+    return y.toFixed(digits).replace(/\.00$/, '');
+  }
+
+  function selectionStep() {
+    const w = payoffs(p);
+    const scale = Math.max(V(), C(), 1);
+    const dp = 0.65 * p * (1 - p) * (w.hawk - w.dove) / scale;
+    p = Math.max(0, Math.min(1, p + dp));
+    history.push(p);
+    if (history.length > 121) history.shift();
+  }
+
+  function resetPopulation() {
+    p = initialP();
+    history = [p];
+    render();
+  }
+
+  function axes({W,H,m,xmin,xmax,ymin,ymax,xlabel,ylabel,xStep,yTicks = 5}) {
+    const X = x => m.l + (x - xmin) / (xmax - xmin) * (W - m.l - m.r);
+    const Y = y => H - m.b - (y - ymin) / (ymax - ymin) * (H - m.t - m.b);
+
+    let s = '';
+    s += `<line x1="${m.l}" y1="${H-m.b}" x2="${W-m.r}" y2="${H-m.b}" stroke="#333"/>`;
+    s += `<line x1="${m.l}" y1="${m.t}" x2="${m.l}" y2="${H-m.b}" stroke="#333"/>`;
+
+    const firstX = Math.ceil(xmin / xStep) * xStep;
+    for (let x = firstX; x <= xmax + 1e-9; x += xStep) {
+      const label = Math.abs(x) < 1e-12 ? 0 : x;
+      s += `<line x1="${X(x)}" y1="${H-m.b}" x2="${X(x)}" y2="${H-m.b+5}" stroke="#333"/>`;
+      s += `<text x="${X(x)}" y="${H-m.b+20}" text-anchor="middle" font-size="11" fill="#586174">${label.toFixed(xStep < 1 ? 1 : 0)}</text>`;
+    }
+
+    for (let i = 0; i <= yTicks; i++) {
+      const y = ymin + (ymax - ymin) * i / yTicks;
+      s += `<line x1="${m.l-5}" y1="${Y(y)}" x2="${m.l}" y2="${Y(y)}" stroke="#333"/>`;
+      s += `<text x="${m.l-9}" y="${Y(y)+4}" text-anchor="end" font-size="10" fill="#586174">${format(y,1)}</text>`;
+    }
+
+    s += `<text x="${(m.l + W - m.r)/2}" y="${H-8}" text-anchor="middle" font-size="13" fill="#586174">${xlabel}</text>`;
+    s += `<text x="12" y="18" font-size="12" fill="#586174">${ylabel}</text>`;
+    return { X, Y, base: s };
+  }
+
+  function renderMatrix() {
+    const v = V(), c = C();
+    document.getElementById('hh').innerHTML = `(V − C)/2 = <strong>${format((v-c)/2)}</strong>`;
+    document.getElementById('hd').innerHTML = `V = <strong>${format(v)}</strong>`;
+    document.getElementById('dh').innerHTML = `<strong>0</strong>`;
+    document.getElementById('dd').innerHTML = `V/2 = <strong>${format(v/2)}</strong>`;
+
+    const w = payoffs(p);
+    document.getElementById('hawkPayoff').textContent = format(w.hawk);
+    document.getElementById('dovePayoff').textContent = format(w.dove);
+    document.getElementById('currentFreq').innerHTML = `Current p<sub>H</sub> = <strong>${p.toFixed(3)}</strong>`;
+  }
+
+  function renderESS() {
+    const q = equilibrium();
+    const el = document.getElementById('essText');
+    if (V() < C()) {
+      el.innerHTML = `Because <strong>C &gt; V</strong>, neither pure strategy is evolutionarily stable. The mixed equilibrium is <strong>p<sub>H</sub>* = V/C = ${q.toFixed(2)}</strong>.`;
+    } else if (V() === C()) {
+      el.innerHTML = `Here <strong>V = C</strong>. The mixed equilibrium reaches the boundary: <strong>p<sub>H</sub>* = 1</strong>.`;
+    } else {
+      el.innerHTML = `Because <strong>V &gt; C</strong>, escalation is favored at every interior Hawk frequency, so the population approaches <strong>all Hawks</strong>.`;
+    }
+  }
+
+  function renderPayoffPlot() {
+    const W = 760, H = 310, m = {l: 58, r: 20, t: 22, b: 48};
+    const data = [];
+    for (let i = 0; i <= 100; i++) {
+      const x = i / 100;
+      data.push({x, ...payoffs(x)});
+    }
+
+    let ymin = Math.min(0, ...data.flatMap(d => [d.hawk, d.dove]));
+    let ymax = Math.max(1, ...data.flatMap(d => [d.hawk, d.dove]));
+    const pad = Math.max(0.5, (ymax - ymin) * 0.12);
+    ymin -= pad;
+    ymax += pad;
+
+    const ax = axes({
+      W,H,m,xmin:0,xmax:1,ymin,ymax,
+      xlabel:'frequency of Hawks, pₕ',
+      ylabel:'expected payoff',
+      xStep:0.2,
+      yTicks:5
+    });
+    const {X,Y} = ax;
+    let s = ax.base;
+
+    if (ymin < 0 && ymax > 0) {
+      s += `<line x1="${m.l}" y1="${Y(0)}" x2="${W-m.r}" y2="${Y(0)}" stroke="#d7dce5" stroke-dasharray="4 4"/>`;
+    }
+
+    let hawkPath = '';
+    let dovePath = '';
+    data.forEach((d,i) => {
+      hawkPath += (i ? 'L' : 'M') + X(d.x).toFixed(2) + ',' + Y(d.hawk).toFixed(2);
+      dovePath += (i ? 'L' : 'M') + X(d.x).toFixed(2) + ',' + Y(d.dove).toFixed(2);
+    });
+
+    s += `<path d="${hawkPath}" fill="none" stroke="#d84f94" stroke-width="3"/>`;
+    s += `<path d="${dovePath}" fill="none" stroke="#3db8b6" stroke-width="3"/>`;
+
+    const eq = equilibrium();
+    s += `<line x1="${X(eq)}" y1="${m.t}" x2="${X(eq)}" y2="${H-m.b}" stroke="#c6ccd7" stroke-dasharray="4 4"/>`;
+    s += `<text x="${Math.min(W-m.r-5, X(eq)+6)}" y="${m.t+14}" font-size="11" fill="#5b6678">equilibrium ${eq.toFixed(2)}</text>`;
+
+    const now = payoffs(p);
+    s += `<circle cx="${X(p)}" cy="${Y(now.hawk)}" r="5" fill="#d84f94"/>`;
+    s += `<circle cx="${X(p)}" cy="${Y(now.dove)}" r="5" fill="#3db8b6"/>`;
+
+    s += `<line x1="${W-130}" y1="28" x2="${W-108}" y2="28" stroke="#d84f94" stroke-width="3"/><text x="${W-101}" y="32" font-size="12" fill="#5b6678">Hawk</text>`;
+    s += `<line x1="${W-130}" y1="47" x2="${W-108}" y2="47" stroke="#3db8b6" stroke-width="3"/><text x="${W-101}" y="51" font-size="12" fill="#5b6678">Dove</text>`;
+
+    document.getElementById('payoffPlot').innerHTML = s;
+  }
+
+  function renderDynamicsPlot() {
+    const W = 760, H = 290, m = {l: 58, r: 20, t: 20, b: 46};
+    const xmax = Math.max(20, history.length - 1);
+    const xStep = xmax <= 20 ? 5 : (xmax <= 60 ? 10 : 20);
+
+    const ax = axes({
+      W,H,m,xmin:0,xmax,ymin:0,ymax:1,
+      xlabel:'selection steps',
+      ylabel:'frequency of Hawks',
+      xStep,
+      yTicks:5
+    });
+    const {X,Y} = ax;
+    let s = ax.base;
+
+    const eq = equilibrium();
+    s += `<line x1="${m.l}" y1="${Y(eq)}" x2="${W-m.r}" y2="${Y(eq)}" stroke="#c6ccd7" stroke-dasharray="5 4"/>`;
+    s += `<text x="${W-m.r-4}" y="${Y(eq)-6}" text-anchor="end" font-size="11" fill="#5b6678">equilibrium = ${eq.toFixed(2)}</text>`;
+
+    let path = '';
+    history.forEach((x,i) => {
+      path += (i ? 'L' : 'M') + X(i).toFixed(2) + ',' + Y(x).toFixed(2);
+    });
+    s += `<path d="${path}" fill="none" stroke="#d84f94" stroke-width="3"/>`;
+    s += `<circle cx="${X(history.length-1)}" cy="${Y(p)}" r="5" fill="#d84f94"/>`;
+
+    document.getElementById('dynamicsPlot').innerHTML = s;
+    document.getElementById('stepStats').innerHTML = `Step ${history.length-1} · p<sub>H</sub> = <strong>${p.toFixed(3)}</strong>`;
+  }
+
+  function renderTakeaway() {
+    const w = payoffs(p);
+    const eq = equilibrium();
+    let text;
+
+    if (Math.abs(w.hawk - w.dove) < 0.03) {
+      text = `Hawks and Doves now have nearly equal expected payoffs. The population is close to the equilibrium frequency of <strong>${eq.toFixed(2)} Hawks</strong>.`;
+    } else if (w.hawk > w.dove) {
+      text = `Hawks currently have the higher payoff (<strong>${format(w.hawk)}</strong> vs. ${format(w.dove)}), so Hawk frequency increases. But as Hawks become more common, they meet one another more often and pay the cost of fighting.`;
+    } else {
+      text = `Doves currently have the higher payoff (<strong>${format(w.dove)}</strong> vs. ${format(w.hawk)}), so Hawk frequency decreases. As Hawks become rarer, however, Hawks increasingly encounter Doves and regain an advantage.`;
+    }
+
+    if (V() < C()) {
+      text += ` This is <strong>negative frequency-dependent selection</strong>: rarity favors the strategy that is currently underrepresented, maintaining a stable mixture of Hawks and Doves.`;
+    } else {
+      text += ` Here the resource is worth at least as much as the cost of fighting, so selection does not maintain a stable Dove component.`;
+    }
+
+    document.getElementById('takeawayText').innerHTML = `<strong>What to notice:</strong> ${text}`;
+  }
+
+  function render() {
+    resourceVal.textContent = V();
+    costVal.textContent = C();
+    startPVal.textContent = initialP().toFixed(2);
+    renderMatrix();
+    renderESS();
+    renderPayoffPlot();
+    renderDynamicsPlot();
+    renderTakeaway();
+  }
+
+  resource.addEventListener('input', resetPopulation);
+  cost.addEventListener('input', resetPopulation);
+  startP.addEventListener('input', resetPopulation);
+
+  document.getElementById('stepOne').addEventListener('click', () => {
+    selectionStep();
+    render();
+  });
+
+  document.getElementById('stepTwenty').addEventListener('click', () => {
+    for (let i = 0; i < 20; i++) selectionStep();
+    render();
+  });
+
+  document.getElementById('reset').addEventListener('click', resetPopulation);
+
+  render();
+})();
+</script>
+</body>
+</html>
