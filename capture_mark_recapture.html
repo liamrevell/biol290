@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Capture–Mark–Recapture: Lincoln–Petersen</title>
+<style>
+:root{--bg:#f7f7f8;--panel:#fff;--text:#1f2937;--muted:#6b7280;--border:#d1d5db;--blue:#2563eb;--green:#16a34a;--orange:#d97706;--purple:#7c3aed;--red:#dc2626;--cyan:#0891b2;--accent:#2563eb;--accentbg:#dbeafe}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}main{max-width:1240px;margin:auto;padding:24px 16px 42px}h1{margin:0 0 6px;font-size:1.85rem}.subtitle{margin:0 0 18px;color:var(--muted)}.card,.panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px}.layout{display:grid;grid-template-columns:minmax(280px,.82fr) minmax(0,1.9fr);gap:14px;align-items:start}.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}label{display:block;font-size:.9rem}input[type=number]{width:100%;min-height:44px;padding:8px;font-size:16px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text)}button{min-height:44px;padding:8px 13px;border:1px solid var(--border);border-radius:9px;background:#fff;color:var(--text);font-weight:650;cursor:pointer}button.primary{background:var(--accentbg);border-color:var(--accent)}button:disabled{opacity:.42;cursor:not-allowed}button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.row{display:flex;gap:8px;flex-wrap:wrap}.mt{margin-top:14px}.mt2{margin-top:8px}.mb{margin-bottom:10px}.small{font-size:.82rem}.muted{color:var(--muted)}.big{font-size:1.28rem;font-weight:800}.formula{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.stagebar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}.stage{font-size:.78rem;padding:5px 8px;border:1px solid var(--border);border-radius:999px;color:var(--muted);background:#fff}.stage.active{background:var(--accentbg);border-color:var(--accent);color:var(--text);font-weight:700}.stage.done{border-color:var(--green);color:var(--text)}
+.pond{position:relative;min-height:310px;border:1px solid var(--border);border-radius:14px;overflow:hidden;background:linear-gradient(#f0fbff,#e6f7fb 38%,#dff3f5)}.pondHeader{position:absolute;left:12px;right:12px;top:10px;display:flex;justify-content:space-between;gap:8px;align-items:flex-start;z-index:3}.populationLayer{position:absolute;left:0;right:0;top:44px;bottom:0}.fish{position:absolute;width:24px;height:12px;border-radius:55% 45% 45% 55%;background:var(--cyan);transform-origin:center}.fish:before{content:"";position:absolute;right:-7px;top:1px;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:8px solid var(--cyan)}.fish:after{content:"";position:absolute;left:4px;top:3px;width:2px;height:2px;border-radius:50%;background:#fff}.fish.marked{background:var(--green)}.fish.marked:before{border-left-color:var(--green)}.fish .tag{display:none;position:absolute;left:10px;top:-2px;width:4px;height:16px;background:var(--red);border-radius:2px}.fish.marked .tag{display:block}.fish.sampled{outline:2px solid var(--purple);outline-offset:2px}.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:.77rem;color:var(--muted)}.legendItem{display:flex;gap:4px;align-items:center}.swatch{width:12px;height:12px;border-radius:4px;display:inline-block}
+.sampleBox{min-height:100px;border:1px dashed var(--border);border-radius:12px;padding:10px;background:#fff}.sampleGrid{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:5px}.sampleFish{height:32px;border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;position:relative;background:#fff}.miniFish{width:20px;height:10px;border-radius:55% 45% 45% 55%;background:var(--cyan);position:relative}.miniFish:before{content:"";position:absolute;right:-6px;top:1px;border-top:4px solid transparent;border-bottom:4px solid transparent;border-left:7px solid var(--cyan)}.miniFish.marked{background:var(--green)}.miniFish.marked:before{border-left-color:var(--green)}.miniFish .tag{display:none;position:absolute;left:8px;top:-2px;width:3px;height:13px;background:var(--red)}.miniFish.marked .tag{display:block}.recap{border:2px solid var(--red)}.stat{border-top:3px solid var(--border);padding-top:7px}.callout{border-left:4px solid var(--purple);padding:10px 12px;background:#fff;border-radius:8px}.hidden{display:none}.historyTable{width:100%;border-collapse:collapse;font-size:.86rem}.historyTable th,.historyTable td{padding:6px;border-bottom:1px solid var(--border);text-align:right}.historyTable th:first-child,.historyTable td:first-child{text-align:left}.spark{width:100%;height:auto;display:block}.toggleRow{display:flex;align-items:center;gap:8px}input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent)}.assumptions{display:flex;gap:6px;flex-wrap:wrap}.pill{font-size:.74rem;border:1px solid var(--border);border-radius:999px;padding:4px 8px;color:var(--muted)}
+@media(max-width:850px){.layout{grid-template-columns:1fr}}@media(max-width:620px){.grid2,.grid3,.grid4{grid-template-columns:1fr}.sampleGrid{grid-template-columns:repeat(6,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+<main>
+<h1>Capture–Mark–Recapture: Lincoln–Petersen</h1>
+<p class="subtitle">Explore how the first sample size, second sample size, and number of recaptures affect a population-size estimate.</p>
+
+<div class="layout">
+<section class="panel">
+  <b>Set up the population</b>
+  <div class="grid2 mt">
+    <label>True population size, N
+      <input id="Ninput" type="number" min="30" max="300" step="1" value="120">
+    </label>
+    <div>
+      <div class="small muted">Or choose a random N</div>
+      <button id="randomN" type="button" class="mt2">Randomize N</button>
+    </div>
+  </div>
+  <div class="grid2 mt">
+    <label>First capture, n
+      <input id="nInput" type="number" min="5" max="100" step="1" value="30">
+    </label>
+    <label>Second capture, K
+      <input id="Kinput" type="number" min="5" max="100" step="1" value="30">
+    </label>
+  </div>
+  <div class="toggleRow mt">
+    <input id="hideN" type="checkbox">
+    <label for="hideN" style="margin:0">Hide true N from students</label>
+  </div>
+  <div class="card mt">
+    <b>Lincoln–Petersen estimator</b>
+    <div class="formula mt2">N̂ = nK / k</div>
+    <div class="small muted mt2">n = number marked in sample 1<br>K = size of sample 2<br>k = marked animals recaptured in sample 2</div>
+  </div>
+  <div class="card mt">
+    <b>Run step by step</b>
+    <div class="row mt2">
+      <button id="capture1" class="primary" type="button">1. Capture & mark n</button>
+      <button id="mixBtn" type="button" disabled>2. Release & mix</button>
+      <button id="capture2" type="button" disabled>3. Capture K</button>
+    </div>
+    <div class="row mt2">
+      <button id="repeat2" type="button" disabled>Repeat second capture</button>
+      <button id="restartBtn" type="button">Restart same setup</button>
+    </div>
+  </div>
+  <div id="validation" class="small muted mt"></div>
+</section>
+
+<section>
+  <div class="stagebar">
+    <span class="stage active">Population</span><span class="stage">Mark</span><span class="stage">Mix</span><span class="stage">Recapture</span><span class="stage">Estimate</span>
+  </div>
+  <div class="pond">
+    <div class="pondHeader">
+      <div><b>Pond population</b><div id="pondN" class="small muted">N = 120</div></div>
+      <div class="legend"><span class="legendItem"><i class="swatch" style="background:var(--cyan)"></i>unmarked</span><span class="legendItem"><i class="swatch" style="background:var(--green)"></i>marked</span><span class="legendItem"><i class="swatch" style="background:var(--purple)"></i>in current sample</span></div>
+    </div>
+    <div id="populationLayer" class="populationLayer"></div>
+  </div>
+
+  <div class="grid2 mt">
+    <div class="card"><b>First capture</b><div id="sample1Text" class="small muted mt2">No fish captured yet.</div><div id="sample1" class="sampleBox mt2"></div></div>
+    <div class="card"><b>Second capture</b><div id="sample2Text" class="small muted mt2">No second sample yet.</div><div id="sample2" class="sampleBox mt2"></div></div>
+  </div>
+  <div class="grid4 mt">
+    <div class="stat"><div class="small muted">n marked</div><div id="nStat" class="big">—</div></div>
+    <div class="stat"><div class="small muted">K in sample 2</div><div id="KStat" class="big">—</div></div>
+    <div class="stat"><div class="small muted">k marked recaptures</div><div id="kStat" class="big">—</div></div>
+    <div class="stat"><div class="small muted">N̂ estimate</div><div id="NhatStat" class="big">—</div></div>
+  </div>
+  <div id="resultBox" class="callout mt hidden"></div>
+</section>
+</div>
+
+<div class="grid2 mt">
+<section class="card">
+  <b>Why the estimator works</b>
+  <div class="formula mt2">n / N ≈ k / K</div>
+  <div class="small muted mt2">After marked animals mix back into the pond, the proportion marked in the whole population should be approximated by the proportion marked in the second sample.</div>
+  <div class="formula mt2">N̂ = nK / k</div>
+</section>
+<section class="card">
+  <b>Explore sampling variation</b>
+  <div class="small muted mt2">Keep the same marked population and click <strong>Repeat second capture</strong>. The recapture count k will vary, so N̂ varies too.</div>
+  <svg id="spark" class="spark mt2" viewBox="0 0 420 130" aria-label="History of population size estimates"></svg>
+</section>
+</div>
+
+<section class="card mt">
+  <div class="row" style="justify-content:space-between;align-items:flex-start">
+    <div><b>Recapture history</b><div class="small muted">Each row is a new second sample from the same marked population.</div></div>
+    <button id="clearHistory" type="button">Clear history</button>
+  </div>
+  <div style="overflow-x:auto" class="mt2">
+    <table class="historyTable"><thead><tr><th>Trial</th><th>n</th><th>K</th><th>k</th><th>N̂</th><th>Error</th></tr></thead><tbody id="historyBody"></tbody></table>
+  </div>
+</section>
+
+<section class="card mt">
+  <b>Assumptions</b>
+  <div class="assumptions mt2"><span class="pill">closed population</span><span class="pill">marks retained</span><span class="pill">marking does not affect survival</span><span class="pill">equal capture probability</span><span class="pill">complete mixing</span></div>
+  <div class="small muted mt2">This simulation samples without replacement within each capture event. The population itself does not change between captures.</div>
+</section>
+</main>
+
+<script>
+(()=>{
+const $=id=>document.getElementById(id),stages=[...document.querySelectorAll('.stage')];
+let N=120,n=30,K=30,fish=[],marked=new Set(),sample1=[],sample2=[],history=[],positions=[];
+function clamp(x,a,b){return Math.max(a,Math.min(b,x))}
+function ri(a,b){return a+Math.floor(Math.random()*(b-a+1))}
+function sampleWithoutReplacement(arr,k){const a=arr.slice();for(let i=0;i<k;i++){const j=i+Math.floor(Math.random()*(a.length-i));[a[i],a[j]]=[a[j],a[i]]}return a.slice(0,k)}
+function setStage(i){stages.forEach((s,j)=>{s.classList.toggle('active',j===i);s.classList.toggle('done',j<i)})}
+function readControls(){let newN=clamp(Math.round(Number($('Ninput').value)||120),30,300),newn=clamp(Math.round(Number($('nInput').value)||30),5,100),newK=clamp(Math.round(Number($('Kinput').value)||30),5,100);newn=Math.min(newn,newN);newK=Math.min(newK,newN);$('Ninput').value=newN;$('nInput').value=newn;$('Kinput').value=newK;N=newN;n=newn;K=newK}
+function makePositions(){positions=[];const cols=Math.ceil(Math.sqrt(N*1.6)),rows=Math.ceil(N/cols);for(let i=0;i<N;i++){const c=i%cols,r=Math.floor(i/cols),jitterX=(Math.random()-.5)*8,jitterY=(Math.random()-.5)*8,x=4+(c+.5)*(92/cols)+jitterX/10,y=5+(r+.5)*(90/rows)+jitterY/10;positions.push({x:clamp(x,2,95),y:clamp(y,2,92),flip:Math.random()<.5})}}
+function updatePondN(){$('pondN').textContent=$('hideN').checked?'N = ? (hidden challenge mode)':`N = ${N}`}
+function renderPopulation(currentSample){const layer=$('populationLayer');layer.innerHTML='';fish.forEach(id=>{const p=positions[id],d=document.createElement('div');d.className='fish'+(marked.has(id)?' marked':'')+(currentSample.has(id)?' sampled':'');d.style.left=p.x+'%';d.style.top=p.y+'%';d.style.transform=`translate(-50%,-50%) scaleX(${p.flip?-1:1})`;d.innerHTML='<span class="tag"></span>';layer.appendChild(d)})}
+function renderSample(id,arr){$(id).innerHTML='<div class="sampleGrid">'+arr.map(fid=>{const isM=marked.has(fid),recap=id==='sample2'&&isM;return `<div class="sampleFish ${recap?'recap':''}"><div class="miniFish ${isM?'marked':''}"><span class="tag"></span></div></div>`}).join('')+'</div>'}
+function drawSpark(){const svg=$('spark'),vals=history.filter(h=>h.nhat!=null).map(h=>h.nhat);if(!vals.length){svg.innerHTML='<text x="210" y="68" text-anchor="middle" font-size="13" fill="#6b7280">Run repeated second captures to see estimate variation.</text>';return}const W=420,H=130,l=34,r=10,t=10,b=22,all=vals.concat([N]);let ymin=Math.min(...all),ymax=Math.max(...all);if(ymax-ymin<10){ymin-=5;ymax+=5}const x=i=>l+(vals.length===1?.5:i/(vals.length-1))*(W-l-r),y=v=>t+(ymax-v)/(ymax-ymin)*(H-t-b);let h=`<line x1="${l}" y1="${H-b}" x2="${W-r}" y2="${H-b}" stroke="#d1d5db"/>`;if(!$('hideN').checked)h+=`<line x1="${l}" y1="${y(N)}" x2="${W-r}" y2="${y(N)}" stroke="#16a34a" stroke-width="2" stroke-dasharray="5 4"/><text x="${W-r}" y="${y(N)-4}" text-anchor="end" font-size="10" fill="#6b7280">true N=${N}</text>`;h+=`<polyline points="${vals.map((v,i)=>`${x(i)},${y(v)}`).join(' ')}" fill="none" stroke="#7c3aed" stroke-width="2"/>`;vals.forEach((v,i)=>h+=`<circle cx="${x(i)}" cy="${y(v)}" r="3.5" fill="#7c3aed"/>`);h+=`<text x="${l}" y="${H-5}" font-size="10" fill="#6b7280">trial 1</text><text x="${W-r}" y="${H-5}" text-anchor="end" font-size="10" fill="#6b7280">trial ${vals.length}</text>`;svg.innerHTML=h}
+function updateHistory(){$('historyBody').innerHTML=history.map(h=>`<tr><td>${h.trial}</td><td>${h.n}</td><td>${h.K}</td><td>${h.k}</td><td>${h.nhat==null?'undefined':h.nhat.toFixed(1)}</td><td>${$('hideN').checked?'hidden':(h.nhat==null?'—':(h.nhat-N).toFixed(1))}</td></tr>`).join('');drawSpark()}
+function restart(){readControls();fish=Array.from({length:N},(_,i)=>i);marked=new Set();sample1=[];sample2=[];history=[];makePositions();$('sample1').innerHTML='';$('sample2').innerHTML='';$('sample1Text').textContent='No fish captured yet.';$('sample2Text').textContent='No second sample yet.';$('nStat').textContent='—';$('KStat').textContent='—';$('kStat').textContent='—';$('NhatStat').textContent='—';$('resultBox').classList.add('hidden');$('resultBox').textContent='';$('capture1').disabled=false;$('mixBtn').disabled=true;$('capture2').disabled=true;$('repeat2').disabled=true;$('historyBody').innerHTML='';drawSpark();setStage(0);renderPopulation(new Set());updatePondN();$('validation').textContent=''}
+function doCapture1(){readControls();sample1=sampleWithoutReplacement(fish,n);marked=new Set(sample1);renderPopulation(new Set(sample1));renderSample('sample1',sample1);$('sample1Text').textContent=`Captured and marked ${n} fish.`;$('nStat').textContent=n;$('capture1').disabled=true;$('mixBtn').disabled=false;setStage(1)}
+function mix(){renderPopulation(new Set());$('mixBtn').disabled=true;$('capture2').disabled=false;$('sample1Text').textContent=`${n} marked fish were released and allowed to mix throughout the pond.`;setStage(2)}
+function doCapture2(){sample2=sampleWithoutReplacement(fish,K);const k=sample2.filter(x=>marked.has(x)).length;renderPopulation(new Set(sample2));renderSample('sample2',sample2);$('sample2Text').textContent=`Captured ${K} fish; ${k} are marked recaptures.`;$('KStat').textContent=K;$('kStat').textContent=k;let nhat=null;if(k>0){nhat=n*K/k;$('NhatStat').textContent=nhat.toFixed(1);const err=nhat-N,pct=100*err/N;$('resultBox').classList.remove('hidden');$('resultBox').innerHTML=$('hideN').checked?`Lincoln–Petersen estimate: <strong>N̂ = ${nhat.toFixed(1)}</strong>. True N is hidden.`:`Lincoln–Petersen estimate: <strong>N̂ = ${nhat.toFixed(1)}</strong>. True N = ${N}. Error = ${err>=0?'+':''}${err.toFixed(1)} (${pct>=0?'+':''}${pct.toFixed(1)}%).`}else{$('NhatStat').textContent='undefined';$('resultBox').classList.remove('hidden');$('resultBox').innerHTML='<strong>No marked fish were recaptured (k = 0).</strong> The Lincoln–Petersen estimate is undefined. Try larger n or K.'}history.push({trial:history.length+1,n,K,k,nhat});updateHistory();$('capture2').disabled=true;$('repeat2').disabled=false;setStage(4)}
+function repeatSecond(){renderPopulation(new Set());doCapture2()}
+$('capture1').addEventListener('click',doCapture1);$('mixBtn').addEventListener('click',mix);$('capture2').addEventListener('click',doCapture2);$('repeat2').addEventListener('click',repeatSecond);$('restartBtn').addEventListener('click',restart);$('randomN').addEventListener('click',()=>{$('Ninput').value=ri(60,220);restart()});$('hideN').addEventListener('change',()=>{updatePondN();updateHistory();drawSpark();if(history.length){const last=history[history.length-1];if(last.nhat!=null){const err=last.nhat-N,pct=100*err/N;$('resultBox').innerHTML=$('hideN').checked?`Lincoln–Petersen estimate: <strong>N̂ = ${last.nhat.toFixed(1)}</strong>. True N is hidden.`:`Lincoln–Petersen estimate: <strong>N̂ = ${last.nhat.toFixed(1)}</strong>. True N = ${N}. Error = ${err>=0?'+':''}${err.toFixed(1)} (${pct>=0?'+':''}${pct.toFixed(1)}%).`}}});$('clearHistory').addEventListener('click',()=>{history=[];$('historyBody').innerHTML='';drawSpark()});['Ninput','nInput','Kinput'].forEach(id=>$(id).addEventListener('change',restart));restart();
+})();
+</script>
+</body>
+</html>

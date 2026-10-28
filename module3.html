@@ -340,6 +340,74 @@ footer{
   .intro-panel h1{font-size:1.75rem}
 }
 
+.cmr-preview{
+  display:flex;
+  align-items:stretch;
+  justify-content:stretch;
+  background:#eef9fb;
+}
+.cmr-water{
+  position:relative;
+  width:100%;
+  height:100%;
+  background:linear-gradient(#f1fbfd,#dff3f5);
+  overflow:hidden;
+}
+.cmr-fish{
+  position:absolute;
+  width:30px;
+  height:14px;
+  border-radius:55% 45% 45% 55%;
+  background:#0891b2;
+}
+.cmr-fish::before{
+  content:"";
+  position:absolute;
+  right:-8px;
+  top:2px;
+  border-top:5px solid transparent;
+  border-bottom:5px solid transparent;
+  border-left:9px solid #0891b2;
+}
+.cmr-fish.marked{
+  background:#16a34a;
+}
+.cmr-fish.marked::before{
+  border-left-color:#16a34a;
+}
+.cmr-fish.marked::after{
+  content:"";
+  position:absolute;
+  left:12px;
+  top:-2px;
+  width:4px;
+  height:18px;
+  border-radius:2px;
+  background:#dc2626;
+}
+.cmr-fish.f1{left:12%;top:24%}
+.cmr-fish.f2{left:33%;top:18%}
+.cmr-fish.f3{left:62%;top:25%}
+.cmr-fish.f4{left:78%;top:17%}
+.cmr-fish.f5{left:21%;top:55%}
+.cmr-fish.f6{left:47%;top:48%}
+.cmr-fish.f7{left:69%;top:58%}
+.cmr-fish.f8{left:84%;top:47%}
+.cmr-formula{
+  position:absolute;
+  left:50%;
+  bottom:10%;
+  transform:translateX(-50%);
+  padding:6px 10px;
+  border:1px solid var(--border);
+  border-radius:999px;
+  background:rgba(255,255,255,.9);
+  color:var(--text);
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:.8rem;
+  font-weight:700;
+}
+
 </style>
 </head>
 <body>
@@ -357,13 +425,36 @@ footer{
   <section class="page-head">
     <div class="module-label">Module 3</div>
     <h1>Population Dynamics</h1>
-    <p class="sub">Interactive models and exercises for the Population Dynamics module.</p>
+    <p class="sub">Interactive models and exercises for population growth, dynamics, and population-size estimation.</p>
   </section>
 
-  <div class="section-title"><strong>Interactives</strong></div>
-  <section class="panel empty">
-    <strong>No interactives added yet.</strong>
-    <span>This page is ready for activities as they are developed.</span>
+  <div class="section-title">
+    <strong>Interactives</strong>
+    <span>Explore population dynamics and estimation</span>
+  </div>
+
+  <section class="interactive-grid" aria-label="Population Dynamics interactives">
+    <a class="panel interactive-card" href="capture_mark_recapture.html">
+      <div class="preview cmr-preview" aria-hidden="true">
+        <div class="cmr-water">
+          <span class="cmr-fish f1"></span>
+          <span class="cmr-fish f2 marked"></span>
+          <span class="cmr-fish f3"></span>
+          <span class="cmr-fish f4 marked"></span>
+          <span class="cmr-fish f5"></span>
+          <span class="cmr-fish f6"></span>
+          <span class="cmr-fish f7 marked"></span>
+          <span class="cmr-fish f8"></span>
+          <div class="cmr-formula">N̂ = nK / k</div>
+        </div>
+      </div>
+      <div class="card-copy">
+        <div class="card-kicker">Population estimation</div>
+        <h2>Capture–Mark–Recapture</h2>
+        <p>Use the Lincoln–Petersen method to estimate an unknown population size. Set or randomize N, vary sample sizes, mark and recapture individuals, and explore sampling error across repeated trials.</p>
+        <span class="open">Open interactive →</span>
+      </div>
+    </a>
   </section>
 
   
