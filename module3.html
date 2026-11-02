@@ -408,6 +408,13 @@ footer{
   font-weight:700;
 }
 
+.growth-preview{position:relative;background:#fbfdff}
+.growth-preview svg{width:100%;height:100%;display:block}
+.growth-axis{stroke:var(--border);stroke-width:1}
+.growth-line{fill:none;stroke:var(--green);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.growth-dot{fill:var(--green)}
+.growth-label{fill:var(--muted);font-size:10px;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+
 </style>
 </head>
 <body>
@@ -452,6 +459,49 @@ footer{
         <div class="card-kicker">Population estimation</div>
         <h2>Capture–Mark–Recapture</h2>
         <p>Use the Lincoln–Petersen method to estimate an unknown population size. Set or randomize N, vary sample sizes, mark and recapture individuals, and explore sampling error across repeated trials.</p>
+        <span class="open">Open interactive →</span>
+      </div>
+    </a>
+
+    <a class="panel interactive-card" href="geometric_growth_revised.html">
+      <div class="preview growth-preview" aria-hidden="true">
+        <svg viewBox="0 0 320 180" preserveAspectRatio="none">
+          <line class="growth-axis" x1="38" y1="148" x2="298" y2="148"></line>
+          <line class="growth-axis" x1="38" y1="20" x2="38" y2="148"></line>
+          <path class="growth-line" d="M38 130 H80 V122 H122 V112 H164 V98 H206 V78 H248 V52 H290 V26"></path>
+          <circle class="growth-dot" cx="38" cy="130" r="4"></circle>
+          <circle class="growth-dot" cx="80" cy="122" r="4"></circle>
+          <circle class="growth-dot" cx="122" cy="112" r="4"></circle>
+          <circle class="growth-dot" cx="164" cy="98" r="4"></circle>
+          <circle class="growth-dot" cx="206" cy="78" r="4"></circle>
+          <circle class="growth-dot" cx="248" cy="52" r="4"></circle>
+          <circle class="growth-dot" cx="290" cy="26" r="4"></circle>
+          <text class="growth-label" x="168" y="170" text-anchor="middle">discrete generations</text>
+        </svg>
+      </div>
+      <div class="card-copy">
+        <div class="card-kicker">Discrete population growth</div>
+        <h2>Geometric Population Growth</h2>
+        <p>Explore Nₜ₊₁ = λNₜ through discrete generations. Advance one or five generations at a time, watch individuals accumulate, and compare linear and log-scaled trajectories.</p>
+        <span class="open">Open interactive →</span>
+      </div>
+    </a>
+
+    <a class="panel interactive-card" href="exponential_growth.html">
+      <div class="preview growth-preview" aria-hidden="true">
+        <svg viewBox="0 0 320 180" preserveAspectRatio="none">
+          <line class="growth-axis" x1="38" y1="148" x2="298" y2="148"></line>
+          <line class="growth-axis" x1="38" y1="20" x2="38" y2="148"></line>
+          <path class="growth-line" d="M38 132 C92 130,142 124,184 108 C225 91,259 63,290 27"></path>
+          <circle class="growth-dot" cx="38" cy="132" r="4"></circle>
+          <circle class="growth-dot" cx="290" cy="27" r="4"></circle>
+          <text class="growth-label" x="168" y="170" text-anchor="middle">continuous time</text>
+        </svg>
+      </div>
+      <div class="card-copy">
+        <div class="card-kicker">Continuous population growth</div>
+        <h2>Exponential Population Growth</h2>
+        <p>Set N₀, r, and a time horizon, then animate continuous growth under dN/dt = rN while the population field and growth trajectory update in real time.</p>
         <span class="open">Open interactive →</span>
       </div>
     </a>
