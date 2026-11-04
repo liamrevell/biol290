@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Geometric Growth with Environmental Stochasticity</title>
+<style>
+:root{
+  --bg:#f7f7f8;--panel:#fff;--text:#1f2937;--muted:#6b7280;--border:#d1d5db;
+  --blue:#2563eb;--blue2:#60a5fa;--green:#16a34a;--red:#dc2626;--purple:#7c3aed;
+  --accent:#2563eb;--accentbg:#dbeafe;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+main{max-width:1220px;margin:auto;padding:24px 16px 42px}
+h1{margin:0 0 6px;font-size:1.85rem;line-height:1.15}
+.sub{margin:0 0 18px;color:var(--muted);max-width:900px}
+.card,.panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px}
+.layout{display:grid;grid-template-columns:minmax(270px,.78fr) minmax(0,1.8fr);gap:14px;align-items:start}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+label{display:block;font-size:.9rem}
+input[type=number]{width:100%;min-height:44px;padding:8px;font-size:16px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text)}
+input[type=range]{width:100%;accent-color:var(--accent)}
+button{min-height:44px;padding:8px 13px;border:1px solid var(--border);border-radius:9px;background:#fff;color:var(--text);font-weight:650;cursor:pointer}
+button.primary,button.active{background:var(--accentbg);border-color:var(--accent)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.mt{margin-top:14px}.mt2{margin-top:8px}.small{font-size:.82rem}.muted{color:var(--muted)}.big{font-size:1.25rem;font-weight:800}
+.formula{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.callout{border-left:4px solid var(--purple);padding:10px 12px;background:#fff;border-radius:8px}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:.78rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.swatch{width:18px;height:3px;border-radius:2px;display:inline-block}
+.swatch.survive{background:var(--blue)}
+.swatch.extinct{background:var(--red)}
+.swatch.det{background:#111827;border-top:1px dashed #111827;height:1px}
+svg{width:100%;height:auto;display:block}
+.axis{stroke:var(--border);stroke-width:1}
+.grid{stroke:var(--border);stroke-width:1;opacity:.45}
+.axisText{fill:var(--muted);font-size:10px;font-family:system-ui,-apple-system,sans-serif}
+.path-survive{fill:none;stroke:var(--blue);stroke-width:1.5;opacity:.28}
+.path-extinct{fill:none;stroke:var(--red);stroke-width:1.7;opacity:.48}
+.path-det{fill:none;stroke:#111827;stroke-width:2;stroke-dasharray:7 5;opacity:.8}
+.ext-dot{fill:var(--red)}
+.scaleToggle{display:flex;gap:5px;flex-wrap:wrap}
+.note{font-size:.78rem;color:var(--muted);line-height:1.4}
+@media(max-width:900px){.grid4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.layout{grid-template-columns:1fr}}
+@media(max-width:430px){.grid4{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+<h1>Geometric Growth with Environmental Stochasticity</h1>
+<p class="sub">
+  Each population follows N<sub>t+1</sub> = λ<sub>t</sub>N<sub>t</sub>, but λ varies independently from year to year.
+  Run many replicate environmental histories to see how variance alone can create very different outcomes — including extinction. Population size is constant within each year and changes at year boundaries.
+</p>
+
+<div class="layout">
+
+<section class="panel">
+  <b>Simulation controls</b>
+
+  <div class="card mt">
+    <label>
+      Starting population, N₀
+      <input id="N0" type="number" min="1" max="100000" step="1" value="20">
+    </label>
+
+    <label class="mt">
+      Mean λ = <strong id="meanVal">1.10</strong>
+      <input id="meanLambda" type="range" min="0.60" max="1.60" step="0.01" value="1.10">
+    </label>
+
+    <label class="mt">
+      SD of λ = <strong id="sdVal">0.40</strong>
+      <input id="sdLambda" type="range" min="0" max="1.00" step="0.02" value="0.40">
+    </label>
+
+    <label class="mt">
+      Number of years
+      <input id="years" type="number" min="5" max="200" step="1" value="50">
+    </label>
+
+    <label class="mt">
+      Number of replicate populations
+      <input id="reps" type="number" min="1" max="150" step="1" value="40">
+    </label>
+  </div>
+
+  <div class="card mt">
+    <div class="formula">Nₜ₊₁ = λₜNₜ</div>
+    <div class="small muted mt2">
+      Each λₜ is drawn from a positive lognormal distribution parameterized to have the selected arithmetic mean and SD.
+    </div>
+    <div class="small mt2">
+      Implied geometric mean λ:
+      <strong id="geoMean">—</strong>
+    </div>
+  </div>
+
+  <div class="row mt">
+    <button id="runBtn" class="primary" type="button">Run new simulations</button>
+    <button id="defaultsBtn" type="button">Reset defaults</button>
+  </div>
+
+  <div class="callout mt">
+    <strong>Extinction rule</strong>
+    <div class="small muted mt2">
+      Because this model tracks expected population size continuously, a replicate is treated as extinct once N falls below 1 individual. It then remains at 0.
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="grid4">
+    <div class="card">
+      <div class="small muted">Replicates</div>
+      <div id="repStat" class="big">40</div>
+    </div>
+    <div class="card">
+      <div class="small muted">Extinct</div>
+      <div id="extinctStat" class="big">—</div>
+    </div>
+    <div class="card">
+      <div class="small muted">Extinction fraction</div>
+      <div id="fracStat" class="big">—</div>
+    </div>
+    <div class="card">
+      <div class="small muted">Median final N</div>
+      <div id="medianStat" class="big">—</div>
+    </div>
+  </div>
+
+  <div class="card mt">
+    <div class="row" style="justify-content:space-between;align-items:flex-start">
+      <div>
+        <b>Replicate population trajectories</b>
+        <div id="scaleText" class="small muted mt2">
+          Linear y-axis. Trajectories are shown as step functions because growth occurs over discrete yearly intervals.
+        </div>
+      </div>
+
+      <div class="scaleToggle">
+        <button id="linearBtn" class="active" type="button">Linear y-axis</button>
+        <button id="logBtn" type="button">Log y-axis</button>
+      </div>
+    </div>
+
+    <div class="legend mt2">
+      <span><i class="swatch survive"></i> surviving replicate</span>
+      <span><i class="swatch extinct"></i> extinct replicate</span>
+      <span><i class="swatch det"></i> deterministic mean-λ trajectory</span>
+    </div>
+
+    <svg id="plot" viewBox="0 0 760 410" aria-label="Stochastic geometric population trajectories"></svg>
+  </div>
+
+  <div id="message" class="callout mt"></div>
+
+  <div class="card mt">
+    <b>What to look for</b>
+    <div class="note mt2">
+      Increasing environmental variance spreads the replicate trajectories apart. Even when the arithmetic mean λ is greater than 1,
+      the geometric mean can fall toward or below 1, so the typical multiplicative trajectory may stagnate or decline.
+      Rare strings of poor years can drive small populations below the extinction threshold.
+    </div>
+  </div>
+</section>
+
+</div>
+</main>
+
+<script>
+(() => {
+
+const $ = id => document.getElementById(id);
+
+let simulations = [];
+let logScale = false;
+
+function clamp(x,a,b){
+  return Math.max(a,Math.min(b,x));
+}
+
+function params(){
+  const N0 = clamp(Math.round(Number($('N0').value)||20),1,100000);
+  const mean = clamp(Number($('meanLambda').value)||1.10,.60,1.60);
+  const sdRaw = Number($('sdLambda').value);
+  const sd = clamp(Number.isFinite(sdRaw) ? sdRaw : 0.40,0,1.00);
+  const years = clamp(Math.round(Number($('years').value)||50),5,200);
+  const reps = clamp(Math.round(Number($('reps').value)||40),1,150);
+
+  $('N0').value = N0;
+  $('years').value = years;
+  $('reps').value = reps;
+  $('meanVal').textContent = mean.toFixed(2);
+  $('sdVal').textContent = sd.toFixed(2);
+
+  return {N0,mean,sd,years,reps};
+}
+
+function lognormalParams(mean,sd){
+  if(sd===0){
+    return {mu:Math.log(mean),sigma:0};
+  }
+  const sigma2 = Math.log(1 + (sd*sd)/(mean*mean));
+  return {
+    mu:Math.log(mean) - 0.5*sigma2,
+    sigma:Math.sqrt(sigma2)
+  };
+}
+
+function impliedGeoMean(mean,sd){
+  const lp = lognormalParams(mean,sd);
+  return Math.exp(lp.mu);
+}
+
+function normalRandom(){
+  let u=0,v=0;
+  while(u===0)u=Math.random();
+  while(v===0)v=Math.random();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+}
+
+function drawLambda(mean,sd){
+  if(sd===0)return mean;
+  const lp=lognormalParams(mean,sd);
+  return Math.exp(lp.mu + lp.sigma*normalRandom());
+}
+
+function runSimulations(){
+  const p=params();
+  simulations=[];
+
+  for(let r=0;r<p.reps;r++){
+    let N=p.N0;
+    let extinct=false;
+    let extinctYear=null;
+    const path=[N];
+
+    for(let t=1;t<=p.years;t++){
+      if(extinct){
+        path.push(0);
+        continue;
+      }
+
+      const lambda=drawLambda(p.mean,p.sd);
+      N *= lambda;
+
+      if(N < 1){
+        N=0;
+        extinct=true;
+        extinctYear=t;
+      }
+
+      path.push(N);
+    }
+
+    simulations.push({path,extinct,extinctYear});
+  }
+
+  render();
+}
+
+function fmt(x){
+  if(!Number.isFinite(x))return '—';
+  if(x>=1e12)return x.toExponential(2);
+  if(x>=1e9)return (x/1e9).toFixed(2)+'B';
+  if(x>=1e6)return (x/1e6).toFixed(2)+'M';
+  if(x>=1e4)return Math.round(x).toLocaleString();
+  if(x>=100)return x.toFixed(0);
+  if(x>=10)return x.toFixed(1).replace('.0','');
+  if(x>=1)return x.toFixed(2).replace(/0+$/,'').replace(/\.$/,'');
+  if(x===0)return '0';
+  return x.toPrecision(2);
+}
+
+function median(arr){
+  if(!arr.length)return 0;
+  const x=[...arr].sort((a,b)=>a-b);
+  const m=Math.floor(x.length/2);
+  return x.length%2 ? x[m] : (x[m-1]+x[m])/2;
+}
+
+function percentile(arr,q){
+  if(!arr.length)return 1;
+  const x=[...arr].sort((a,b)=>a-b);
+  const pos=(x.length-1)*q;
+  const lo=Math.floor(pos),hi=Math.ceil(pos);
+  if(lo===hi)return x[lo];
+  return x[lo]*(hi-pos)+x[hi]*(pos-lo);
+}
+
+function renderPlot(){
+  const svg=$('plot');
+  const p=params();
+
+  const W=760,H=410,left=66,right=20,top=20,bottom=42;
+  const x=t=>left+(t/p.years)*(W-left-right);
+
+  const positives=[];
+  simulations.forEach(s=>s.path.forEach(v=>{if(v>0&&Number.isFinite(v))positives.push(v);}));
+
+  const det=[];
+  for(let t=0;t<=p.years;t++)det.push(p.N0*Math.pow(p.mean,t));
+  det.forEach(v=>{if(v>0&&Number.isFinite(v))positives.push(v);});
+
+  const fullMax=Math.max(1,...positives);
+  const fullMin=Math.min(...positives);
+
+  let y,ticks=[];
+
+  if(!logScale){
+    const ymax=fullMax*1.05;
+    y=v=>top+(ymax-v)/ymax*(H-top-bottom);
+    for(let i=0;i<=4;i++)ticks.push(ymax*i/4);
+  }else{
+    const ymin=Math.max(0.1,fullMin/1.15);
+    const ymax=Math.max(ymin*1.01,fullMax*1.10);
+    const lo=Math.log10(ymin),hi=Math.log10(ymax);
+    y=v=>{
+      if(v<=0)return H-bottom;
+      return top+(hi-Math.log10(v))/(hi-lo)*(H-top-bottom);
+    };
+    for(let i=0;i<=4;i++)ticks.push(Math.pow(10,lo+(hi-lo)*i/4));
+  }
+
+  let h=
+    `<line class="axis" x1="${left}" y1="${H-bottom}" x2="${W-right}" y2="${H-bottom}"/>`+
+    `<line class="axis" x1="${left}" y1="${top}" x2="${left}" y2="${H-bottom}"/>`;
+
+  ticks.forEach(v=>{
+    const yy=y(v);
+    h+=
+      `<line class="grid" x1="${left}" y1="${yy}" x2="${W-right}" y2="${yy}"/>`+
+      `<text class="axisText" x="${left-8}" y="${yy+3}" text-anchor="end">${fmt(v)}</text>`;
+  });
+
+  const tickCount=Math.min(10,p.years);
+  const used=new Set();
+  for(let i=0;i<=tickCount;i++){
+    const t=Math.round(i*p.years/tickCount);
+    if(used.has(t))continue;
+    used.add(t);
+    const xx=x(t);
+    h+=
+      `<line class="axis" x1="${xx}" y1="${H-bottom}" x2="${xx}" y2="${H-bottom+4}"/>`+
+      `<text class="axisText" x="${xx}" y="${H-bottom+17}" text-anchor="middle">${t}</text>`;
+  }
+
+  simulations.forEach(s=>{
+    const cls=s.extinct?'path-extinct':'path-survive';
+    let d=`M ${x(0)} ${y(s.path[0])}`;
+    for(let t=0;t<s.path.length-1;t++){
+      d+=` H ${x(t+1)} V ${y(s.path[t+1])}`;
+    }
+    h+=`<path class="${cls}" d="${d}"/>`;
+
+    if(s.extinct && s.extinctYear!==null){
+      h+=`<circle class="ext-dot" cx="${x(s.extinctYear)}" cy="${y(0)}" r="3.5"/>`;
+    }
+  });
+
+  let dd=`M ${x(0)} ${y(det[0])}`;
+  for(let t=0;t<det.length-1;t++){
+    dd+=` H ${x(t+1)} V ${y(det[t+1])}`;
+  }
+  h+=`<path class="path-det" d="${dd}"/>`;
+
+  h+=
+    `<text class="axisText" x="${(left+W-right)/2}" y="${H-8}" text-anchor="middle">year t</text>`+
+    `<text class="axisText" x="15" y="${(top+H-bottom)/2}" transform="rotate(-90 15 ${(top+H-bottom)/2})" text-anchor="middle">population size N${logScale?' (log scale)':''}</text>`;
+
+  svg.innerHTML=h;
+}
+
+function render(){
+  const p=params();
+  const gm=impliedGeoMean(p.mean,p.sd);
+  $('geoMean').textContent=gm.toFixed(3);
+
+  const extinct=simulations.filter(s=>s.extinct).length;
+  const finals=simulations.map(s=>s.path[s.path.length-1]);
+
+  $('repStat').textContent=p.reps;
+  $('extinctStat').textContent=extinct;
+  $('fracStat').textContent=simulations.length ? (100*extinct/simulations.length).toFixed(1)+'%' : '—';
+  $('medianStat').textContent=simulations.length ? fmt(median(finals)) : '—';
+
+  $('linearBtn').classList.toggle('active',!logScale);
+  $('logBtn').classList.toggle('active',logScale);
+  $('scaleText').textContent=logScale
+    ? 'Log y-axis. Extinct populations are plotted at the baseline.'
+    : 'Linear y-axis. Trajectories are shown as step functions because growth occurs over discrete yearly intervals. Large successful populations can dominate the scale; switch to log scale to compare trajectories more clearly.';
+
+  renderPlot();
+
+  const relation = gm>1.001 ? 'greater than 1' : gm<0.999 ? 'less than 1' : 'approximately 1';
+
+  $('message').innerHTML =
+    `Mean λ is <strong>${p.mean.toFixed(2)}</strong>, but with SD = <strong>${p.sd.toFixed(2)}</strong> `+
+    `the implied geometric mean λ is <strong>${gm.toFixed(3)}</strong> (${relation}). `+
+    `In this run, <strong>${extinct} of ${p.reps}</strong> replicate populations went extinct.`;
+}
+
+$('runBtn').addEventListener('click',runSimulations);
+
+$('defaultsBtn').addEventListener('click',()=>{
+  $('N0').value=20;
+  $('meanLambda').value=1.10;
+  $('sdLambda').value=0.40;
+  $('years').value=50;
+  $('reps').value=40;
+  logScale=false;
+  runSimulations();
+});
+
+$('linearBtn').addEventListener('click',()=>{
+  logScale=false;
+  render();
+});
+
+$('logBtn').addEventListener('click',()=>{
+  logScale=true;
+  render();
+});
+
+$('meanLambda').addEventListener('input',()=>{
+  $('meanVal').textContent=Number($('meanLambda').value).toFixed(2);
+  const p=params();
+  $('geoMean').textContent=impliedGeoMean(p.mean,p.sd).toFixed(3);
+});
+
+$('sdLambda').addEventListener('input',()=>{
+  $('sdVal').textContent=Number($('sdLambda').value).toFixed(2);
+  const p=params();
+  $('geoMean').textContent=impliedGeoMean(p.mean,p.sd).toFixed(3);
+});
+
+runSimulations();
+
+})();
+</script>
+</body>
+</html>
