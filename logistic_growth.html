@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Logistic Population Growth</title>
+<style>
+:root{
+  --bg:#f7f7f8;--panel:#fff;--text:#1f2937;--muted:#6b7280;--border:#d1d5db;
+  --blue:#2563eb;--green:#16a34a;--orange:#d97706;--purple:#7c3aed;
+  --accent:#2563eb;--accentbg:#dbeafe;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+main{max-width:1240px;margin:auto;padding:24px 16px 42px}
+h1{margin:0 0 6px;font-size:1.85rem}
+.sub{margin:0 0 18px;color:var(--muted);max-width:900px}
+.card,.panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px}
+.layout{display:grid;grid-template-columns:minmax(270px,.76fr) minmax(0,1.9fr);gap:14px;align-items:start}
+.plots{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+label{display:block;font-size:.9rem}
+input[type=number]{width:100%;min-height:44px;padding:8px;font-size:16px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text)}
+input[type=range]{width:100%;accent-color:var(--accent)}
+button{min-height:44px;padding:8px 13px;border:1px solid var(--border);border-radius:9px;background:#fff;color:var(--text);font-weight:650;cursor:pointer}
+button.primary{background:var(--accentbg);border-color:var(--accent)}
+button:disabled{opacity:.4;cursor:not-allowed}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.mt{margin-top:14px}.mt2{margin-top:8px}
+.small{font-size:.82rem}.muted{color:var(--muted)}.big{font-size:1.22rem;font-weight:800}
+.formula{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+svg{width:100%;height:auto;display:block}
+.axis{stroke:var(--border);stroke-width:1}
+.grid{stroke:var(--border);stroke-width:1;opacity:.45}
+.curve{fill:none;stroke:var(--green);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.rateCurve{fill:none;stroke:var(--orange);stroke-width:3;stroke-linecap:round}
+.guideK{stroke:var(--purple);stroke-width:1.5;stroke-dasharray:6 5;opacity:.75}
+.guideHalf{stroke:var(--orange);stroke-width:1.3;stroke-dasharray:4 4;opacity:.65}
+.marker{fill:var(--blue);stroke:#fff;stroke-width:2}
+.axisText{fill:var(--muted);font-size:10px;font-family:system-ui,-apple-system,sans-serif}
+.annotation{fill:var(--text);font-size:10px;font-family:system-ui,-apple-system,sans-serif}
+.callout{border-left:4px solid var(--purple);padding:10px 12px;background:#fff;border-radius:8px}
+.progressOuter{height:8px;background:#eef2f7;border-radius:999px;overflow:hidden}
+.progressInner{height:100%;width:0%;background:var(--green)}
+@media(max-width:900px){.plots{grid-template-columns:1fr}.grid4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.layout{grid-template-columns:1fr}}
+@media(max-width:430px){.grid4{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+<h1>Logistic Population Growth</h1>
+<p class="sub">Explore how density dependence links the instantaneous growth rate dN/dt to the population trajectory N(t). The blue marker shows the same population state on both plots.</p>
+
+<div class="layout">
+<section class="panel">
+  <b>Model controls</b>
+
+  <div class="card mt">
+    <label>Starting population, N₀
+      <input id="N0" type="number" min="1" max="10000" step="1" value="20">
+    </label>
+
+    <label class="mt">Intrinsic growth rate, r = <strong id="rVal">0.20</strong>
+      <input id="r" type="range" min="0.02" max="1.00" step="0.01" value="0.20">
+    </label>
+
+    <label class="mt">Carrying capacity, K
+      <input id="K" type="number" min="10" max="100000" step="10" value="500">
+    </label>
+
+    <label class="mt">Time horizon
+      <input id="tmax" type="number" min="1" max="100" step="1" value="40">
+    </label>
+
+    <label class="mt">Animation speed
+      <input id="speed" type="range" min="0.5" max="4" step="0.5" value="1">
+    </label>
+    <div id="speedVal" class="small muted">1×</div>
+  </div>
+
+  <div class="card mt">
+    <div class="formula">dN/dt = rN(1 − N/K)</div>
+    <div class="formula mt2">N(t) = K / [1 + ((K − N₀)/N₀)e<sup>−rt</sup>]</div>
+    <div id="interpret" class="small muted mt2"></div>
+  </div>
+
+  <div class="row mt">
+    <button id="runBtn" class="primary" type="button">Run animation</button>
+    <button id="pauseBtn" type="button" disabled>Pause</button>
+    <button id="resetBtn" type="button">Reset</button>
+  </div>
+
+  <div class="callout mt">
+    <strong>Key prediction</strong>
+    <div class="small muted mt2">
+      Population growth is fastest at <strong>N = K/2</strong>, where
+      <strong>dN/dt = rK/4</strong>. Growth slows to zero as N approaches K.
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="grid4">
+    <div class="card"><div class="small muted">Time, t</div><div id="timeStat" class="big">0.00</div></div>
+    <div class="card"><div class="small muted">Population N</div><div id="nStat" class="big">20</div></div>
+    <div class="card"><div class="small muted">Current dN/dt</div><div id="growthStat" class="big">—</div></div>
+    <div class="card"><div class="small muted">N/K</div><div id="fractionStat" class="big">—</div></div>
+  </div>
+
+  <div class="plots mt">
+    <div class="card">
+      <b>dN/dt as a function of N</b>
+      <div class="small muted mt2">The logistic growth rate is zero at N = 0 and N = K, with a maximum at K/2.</div>
+      <svg id="ratePlot" viewBox="0 0 520 340" aria-label="dN/dt as a function of N"></svg>
+    </div>
+
+    <div class="card">
+      <b>N as a function of t</b>
+      <div class="small muted mt2">The population approaches carrying capacity asymptotically.</div>
+      <svg id="timePlot" viewBox="0 0 520 340" aria-label="N as a function of time"></svg>
+    </div>
+  </div>
+
+  <div class="card mt">
+    <div class="progressOuter"><div id="progress" class="progressInner"></div></div>
+    <div id="message" class="small muted mt2"></div>
+  </div>
+</section>
+</div>
+</main>
+
+<script>
+(() => {
+const $=id=>document.getElementById(id);
+let currentTime=0,running=false,paused=false,animationId=null,lastTimestamp=null;
+
+function clamp(x,a,b){return Math.max(a,Math.min(b,x));}
+
+function params(){
+  const Kraw=Number($('K').value);
+  const K=clamp(Number.isFinite(Kraw)?Kraw:500,10,100000);
+
+  const Nraw=Number($('N0').value);
+  const N0=clamp(Number.isFinite(Nraw)?Nraw:20,1,K*2);
+
+  const rraw=Number($('r').value);
+  const r=clamp(Number.isFinite(rraw)?rraw:0.20,0.02,1);
+
+  const traw=Number($('tmax').value);
+  const tmax=clamp(Number.isFinite(traw)?traw:40,1,100);
+
+  const sraw=Number($('speed').value);
+  const speed=clamp(Number.isFinite(sraw)?sraw:1,0.5,4);
+
+  $('K').value=K;
+  $('N0').value=N0;
+  $('tmax').value=tmax;
+  $('rVal').textContent=r.toFixed(2);
+  $('speedVal').textContent=speed.toFixed(1).replace('.0','')+'×';
+  return{N0,r,K,tmax,speed};
+}
+
+function populationAt(t){
+  const p=params();
+  const A=(p.K-p.N0)/p.N0;
+  return p.K/(1+A*Math.exp(-p.r*t));
+}
+
+function growthAt(N){
+  const p=params();
+  return p.r*N*(1-N/p.K);
+}
+
+function fmt(x){
+  if(Math.abs(x)>=1e6)return x.toExponential(2);
+  if(Math.abs(x)>=1000)return Math.round(x).toLocaleString();
+  if(Math.abs(x)>=100)return x.toFixed(0);
+  if(Math.abs(x)>=10)return x.toFixed(1).replace('.0','');
+  return x.toFixed(2).replace(/0+$/,'').replace(/\.$/,'');
+}
+
+function renderRatePlot(){
+  const svg=$('ratePlot'),p=params();
+  const W=520,H=340,left=62,right=22,top=24,bottom=46;
+  const xmax=Math.max(p.K*1.15,p.N0*1.05);
+  const maxPositive=p.r*p.K/4;
+  const minRate=growthAt(xmax);
+  const ymin=Math.min(0,minRate*1.1);
+  const ymax=Math.max(1,maxPositive*1.15);
+
+  const x=N=>left+(N/xmax)*(W-left-right);
+  const y=g=>top+(ymax-g)/(ymax-ymin)*(H-top-bottom);
+
+  let h=`<line class="axis" x1="${left}" y1="${y(0)}" x2="${W-right}" y2="${y(0)}"/>
+         <line class="axis" x1="${left}" y1="${top}" x2="${left}" y2="${H-bottom}"/>`;
+
+  for(let i=0;i<=4;i++){
+    const val=ymin+(ymax-ymin)*i/4,yy=y(val);
+    h+=`<line class="grid" x1="${left}" y1="${yy}" x2="${W-right}" y2="${yy}"/>
+        <text class="axisText" x="${left-7}" y="${yy+3}" text-anchor="end">${fmt(val)}</text>`;
+  }
+
+  for(let i=0;i<=5;i++){
+    const N=xmax*i/5,xx=x(N);
+    h+=`<line class="axis" x1="${xx}" y1="${y(0)}" x2="${xx}" y2="${y(0)+4}"/>
+        <text class="axisText" x="${xx}" y="${H-bottom+18}" text-anchor="middle">${fmt(N)}</text>`;
+  }
+
+  const xK=x(p.K),xHalf=x(p.K/2),yMax=y(maxPositive);
+  h+=`<line class="guideK" x1="${xK}" y1="${top}" x2="${xK}" y2="${H-bottom}"/>
+      <line class="guideHalf" x1="${xHalf}" y1="${y(0)}" x2="${xHalf}" y2="${yMax}"/>
+      <text class="annotation" x="${xHalf+5}" y="${yMax-7}">max at K/2</text>`;
+
+  let d='';
+  const samples=180;
+  for(let i=0;i<=samples;i++){
+    const N=xmax*i/samples,g=p.r*N*(1-N/p.K);
+    d+=(i===0?'M ':' L ')+x(N)+' '+y(g);
+  }
+  h+=`<path class="rateCurve" d="${d}"/>`;
+
+  const Nnow=populationAt(currentTime),gnow=growthAt(Nnow);
+  h+=`<circle class="marker" cx="${x(Math.min(Nnow,xmax))}" cy="${y(gnow)}" r="5"/>`;
+
+  h+=`<text class="axisText" x="${(left+W-right)/2}" y="${H-8}" text-anchor="middle">population size N</text>
+      <text class="axisText" x="15" y="${(top+H-bottom)/2}" transform="rotate(-90 15 ${(top+H-bottom)/2})" text-anchor="middle">dN/dt</text>`;
+
+  svg.innerHTML=h;
+}
+
+function renderTimePlot(){
+  const svg=$('timePlot'),p=params();
+  const W=520,H=340,left=62,right=22,top=24,bottom=46;
+  const ymax=Math.max(p.K,p.N0)*1.12;
+
+  const x=t=>left+(t/p.tmax)*(W-left-right);
+  const y=N=>top+(ymax-N)/ymax*(H-top-bottom);
+
+  let h=`<line class="axis" x1="${left}" y1="${H-bottom}" x2="${W-right}" y2="${H-bottom}"/>
+         <line class="axis" x1="${left}" y1="${top}" x2="${left}" y2="${H-bottom}"/>`;
+
+  for(let i=0;i<=4;i++){
+    const val=ymax*i/4,yy=y(val);
+    h+=`<line class="grid" x1="${left}" y1="${yy}" x2="${W-right}" y2="${yy}"/>
+        <text class="axisText" x="${left-7}" y="${yy+3}" text-anchor="end">${fmt(val)}</text>`;
+  }
+
+  for(let i=0;i<=5;i++){
+    const t=p.tmax*i/5,xx=x(t);
+    h+=`<line class="axis" x1="${xx}" y1="${H-bottom}" x2="${xx}" y2="${H-bottom+4}"/>
+        <text class="axisText" x="${xx}" y="${H-bottom+18}" text-anchor="middle">${fmt(t)}</text>`;
+  }
+
+  const yK=y(p.K);
+  h+=`<line class="guideK" x1="${left}" y1="${yK}" x2="${W-right}" y2="${yK}"/>
+      <text class="annotation" x="${W-right-3}" y="${yK-6}" text-anchor="end">K</text>`;
+
+  let d='';
+  const samples=220;
+  for(let i=0;i<=samples;i++){
+    const t=p.tmax*i/samples,N=populationAt(t);
+    d+=(i===0?'M ':' L ')+x(t)+' '+y(N);
+  }
+  h+=`<path class="curve" d="${d}"/>`;
+
+  const Nnow=populationAt(currentTime);
+  h+=`<circle class="marker" cx="${x(currentTime)}" cy="${y(Nnow)}" r="5"/>`;
+
+  h+=`<text class="axisText" x="${(left+W-right)/2}" y="${H-8}" text-anchor="middle">time t</text>
+      <text class="axisText" x="15" y="${(top+H-bottom)/2}" transform="rotate(-90 15 ${(top+H-bottom)/2})" text-anchor="middle">population size N(t)</text>`;
+
+  svg.innerHTML=h;
+}
+
+function render(){
+  const p=params();
+  currentTime=clamp(currentTime,0,p.tmax);
+  const N=populationAt(currentTime),g=growthAt(N);
+
+  $('timeStat').textContent=currentTime.toFixed(2);
+  $('nStat').textContent=fmt(N);
+  $('growthStat').textContent=fmt(g);
+  $('fractionStat').textContent=(N/p.K).toFixed(2);
+
+  $('interpret').textContent=
+    p.N0<p.K
+      ? 'N₀ < K, so the population increases toward K. Growth accelerates until N = K/2, then decelerates.'
+      : p.N0>p.K
+      ? 'N₀ > K, so dN/dt is negative and the population declines toward K.'
+      : 'N₀ = K, so the population begins at equilibrium and dN/dt = 0.';
+
+  $('progress').style.width=(100*currentTime/p.tmax)+'%';
+  $('message').innerHTML=
+    `At t = <strong>${currentTime.toFixed(2)}</strong>, N = <strong>${fmt(N)}</strong> and dN/dt = <strong>${fmt(g)}</strong>. The blue marker shows this same state on both plots.`;
+
+  $('runBtn').disabled=running&&!paused;
+  $('pauseBtn').disabled=!running;
+  $('pauseBtn').textContent=paused?'Resume':'Pause';
+
+  renderRatePlot();
+  renderTimePlot();
+}
+
+function stopAnimation(){
+  if(animationId!==null){cancelAnimationFrame(animationId);animationId=null;}
+  running=false;paused=false;lastTimestamp=null;
+}
+
+function animate(timestamp){
+  if(!running||paused)return;
+  const p=params();
+  if(lastTimestamp===null)lastTimestamp=timestamp;
+  const elapsed=Math.min(.10,(timestamp-lastTimestamp)/1000);
+  lastTimestamp=timestamp;
+
+  currentTime += elapsed*(p.tmax/10)*p.speed;
+
+  if(currentTime>=p.tmax){
+    currentTime=p.tmax;
+    running=false;paused=false;lastTimestamp=null;
+    render();
+    return;
+  }
+
+  render();
+  animationId=requestAnimationFrame(animate);
+}
+
+$('runBtn').addEventListener('click',()=>{
+  if(currentTime>=params().tmax)currentTime=0;
+  running=true;paused=false;lastTimestamp=null;
+  render();
+  animationId=requestAnimationFrame(animate);
+});
+
+$('pauseBtn').addEventListener('click',()=>{
+  if(!running)return;
+  paused=!paused;
+  lastTimestamp=null;
+  render();
+  if(!paused)animationId=requestAnimationFrame(animate);
+});
+
+$('resetBtn').addEventListener('click',()=>{
+  stopAnimation();
+  currentTime=0;
+  render();
+});
+
+$('r').addEventListener('input',()=>{
+  stopAnimation();
+  currentTime=0;
+  render();
+});
+
+$('speed').addEventListener('input',()=>{params();});
+
+['N0','K','tmax'].forEach(id=>{
+  $(id).addEventListener('change',()=>{
+    stopAnimation();
+    currentTime=0;
+    render();
+  });
+});
+
+render();
+})();
+</script>
+</body>
+</html>
